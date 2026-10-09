@@ -96,6 +96,13 @@ const LOG = [
     resolution: "`* text=auto eol=lf` + Windows 스크립트(.bat/.cmd/.ps1)만 CRLF, 바이너리 지정. 저장소 내용은 이미 LF 라 재정규화 변경 없음. 작업 디렉터리 파일을 다시 체크아웃해 LF 로 맞춤.",
     refs: [".gitattributes", "L003", "L008"],
   },
+  {
+    id: "L012", at: "2026-10-09 13:45", task: "T01c", type: "change", status: "resolved",
+    title: "병합 규칙 변경: 로컬 main 병합만, GitHub push 는 요청 시에만",
+    detail: "사용자 요청: 로컬 git main 에만 병합하고 GitHub 에는 push 하지 말 것. 이후에도 계속 적용.",
+    resolution: "AGENT.md 13장 7단계 수정 (L006 의 \"병합 후 main push\" 를 대체). chore/gitattributes 부터 로컬 병합만 수행.",
+    refs: ["L006", "AGENT.md §13", "4c01895"],
+  },
 ];
 </script>
 
