@@ -100,8 +100,9 @@ const PROGRESS = {
     },
     {
       id: "T12", phase: "dev", title: "프론트 내 예약 · 취소",
-      status: "todo", branch: "feat/T12-frontend-my",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "review", branch: "feat/T12-frontend-my",
+      checks: { error: true, spec: true }, commits: ["32b0523", "52a2b51"],
+      note: "npm run lint · build 통과. 실제 브라우저로 확인: 내 예약 목록 → 상세(지금 취소 시 100% 156,000원 안내) → 확인 창 → 취소됨·환불 완료 표시, 취소 버튼 사라짐, 숙소 화면 잔여 8 → 7(예약) → 8(취소).",
     },
     {
       id: "T13", phase: "dev", title: "프론트 관리자 화면",
@@ -131,7 +132,7 @@ const PROGRESS = {
     { id: "R3", name: "결제 · 모의 PG · 중복 콜백 멱등 · 보상 처리", status: "done" },
     { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "done" },
     { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "done" },
-    { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "todo" },
+    { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "in-progress" },
     { id: "R4", name: "결제 취소 재시도 (최대 횟수 · 운영자 분류)", status: "todo" },
   ],
 
