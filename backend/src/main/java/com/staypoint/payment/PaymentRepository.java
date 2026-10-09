@@ -34,6 +34,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	@Query("SELECT p FROM Payment p WHERE p.id = :id")
 	Optional<Payment> findByIdForUpdate(@Param("id") Long id);
 
+	/** 예약의 승인된 결제 (최대 1건 — 부분 UNIQUE 인덱스). 취소 시 예약 다음 순서로 잠근다. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT p FROM Payment p WHERE p.reservationId = :reservationId AND p.status = 'APPROVED'")
+	Optional<Payment> findApprovedByReservationIdForUpdate(@Param("reservationId") Long reservationId);
+
 	/** 응답을 못 받고 READY 로 오래 남은 결제 (상태 확정 스케줄러 대상). */
 	@Query("SELECT p.pgOrderId FROM Payment p WHERE p.status = :status AND p.createdAt < :before ORDER BY p.createdAt")
 	List<String> findOrderIdsByStatusCreatedBefore(@Param("status") PaymentStatus status,

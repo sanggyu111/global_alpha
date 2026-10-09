@@ -77,12 +77,22 @@ public class PaymentCancel {
 
 	/** 승인됐지만 예약을 확정할 수 없어 전액을 돌려주는 보상 취소. 결제당 하나뿐이라 키를 결제 id 로 만든다. */
 	public static PaymentCancel compensation(Payment payment, Instant now) {
+		return pending(payment, payment.getAmount(), Reason.COMPENSATION, "COMP-" + payment.getId(), now);
+	}
+
+	/** 사용자 취소에 따른 환불 (환불 정책에 따라 부분 금액일 수 있음). 예약당 사용자 취소는 한 번뿐이라 키를 결제 id 로 만든다. */
+	public static PaymentCancel userCancel(Payment payment, BigDecimal refundAmount, Instant now) {
+		return pending(payment, refundAmount, Reason.USER_CANCEL, "USER-" + payment.getId(), now);
+	}
+
+	private static PaymentCancel pending(Payment payment, BigDecimal amount, Reason reason, String cancelKey,
+			Instant now) {
 		PaymentCancel c = new PaymentCancel();
 		c.paymentId = payment.getId();
-		c.cancelAmount = payment.getAmount();
-		c.reason = Reason.COMPENSATION;
+		c.cancelAmount = amount;
+		c.reason = reason;
 		c.status = Status.PENDING;
-		c.cancelKey = "COMP-" + payment.getId();
+		c.cancelKey = cancelKey;
 		c.attemptCount = 0;
 		c.nextRetryAt = now;
 		c.createdAt = now;
