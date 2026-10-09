@@ -6,6 +6,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import com.staypoint.common.error.ErrorCode;
  */
 @Service
 public class InventoryService {
+
+	private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
 
 	private final RoomInventoryRepository inventoryRepository;
 	private final RoomRateRepository rateRepository;
@@ -49,6 +53,21 @@ public class InventoryService {
 		int held = inventoryRepository.holdOneRoomPerNight(roomTypeId, checkIn, checkOut);
 		if (held != nights) {
 			throw new BusinessException(ErrorCode.SOLD_OUT);
+		}
+	}
+
+	/**
+	 * 숙박 기간 모든 날짜의 재고를 1실씩 복원한다 (선점 만료 · 취소).
+	 * 복원 못 한 날짜가 있으면 재고 데이터가 이미 어긋난 것이므로 예외로 만료·취소를 막지 않고 ERROR 로그를 남긴다.
+	 * 예약을 끝내는 것이 우선이고, 어긋난 재고는 정합 점검(설계 6장)으로 찾아 고친다.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void release(Long reservationId, Long roomTypeId, LocalDate checkIn, LocalDate checkOut) {
+		long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
+		int released = inventoryRepository.releaseOneRoomPerNight(roomTypeId, checkIn, checkOut);
+		if (released != nights) {
+			log.error("재고 복원 불일치: reservationId={}, roomTypeId={}, {}~{}, 복원 {}일 / 숙박 {}일",
+					reservationId, roomTypeId, checkIn, checkOut, released, nights);
 		}
 	}
 }
