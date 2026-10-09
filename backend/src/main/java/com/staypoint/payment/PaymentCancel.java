@@ -35,6 +35,12 @@ public class PaymentCancel {
 
 	private static final int MAX_ERROR_LENGTH = 500;
 
+	/**
+	 * "지금 누가 처리 중" 표시 기간. 처리하는 쪽이 next_retry_at 을 이만큼 미뤄 두면 재시도 스케줄러가 집어 가지 않는다.
+	 * 처리 중 서버가 죽어도 이 시간이 지나면 다시 대상이 된다 (cancel_key 덕분에 PG 에서 두 번 취소되지 않음).
+	 */
+	public static final Duration PROCESSING_LEASE = Duration.ofMinutes(1);
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -94,10 +100,27 @@ public class PaymentCancel {
 		c.status = Status.PENDING;
 		c.cancelKey = cancelKey;
 		c.attemptCount = 0;
-		c.nextRetryAt = now;
+		// 만든 쪽이 커밋 직후 바로 1회 시도한다 → 그동안 스케줄러가 같은 건을 집지 않게 미뤄 둔다
+		c.nextRetryAt = now.plus(PROCESSING_LEASE);
 		c.createdAt = now;
 		c.updatedAt = now;
 		return c;
+	}
+
+	/**
+	 * 운영자 수동 재시도: MANUAL_REVIEW 를 다시 PENDING 으로 돌려 한 번 더 시도하게 한다.
+	 * 시도 횟수는 그대로라 이번에도 실패하면 바로 MANUAL_REVIEW 로 돌아간다 (자동 재시도가 다시 시작되지 않음).
+	 *
+	 * @return 시도할 수 있으면 true (이미 SUCCEEDED 면 false)
+	 */
+	public boolean reopenForManualRetry(Instant now) {
+		if (status == Status.SUCCEEDED) {
+			return false;
+		}
+		this.status = Status.PENDING;
+		this.nextRetryAt = now.plus(PROCESSING_LEASE); // 운영자 요청이 바로 시도하므로 스케줄러와 겹치지 않게
+		this.updatedAt = now;
+		return true;
 	}
 
 	public void succeed(Instant now) {

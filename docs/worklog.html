@@ -456,6 +456,18 @@ const LOG = [
     resolution: "실제 브라우저(Chrome)로 페이지 이동·필터·재고 축소 거부·요금 반영·재계산 확인. 확인 스크립트의 대기 조건이 다른 문구('PG 응답 없음')에 걸려 먼저 판정한 것은 API·화면 재확인으로 정상임을 확인.",
     refs: ["docs/02-design.md §8"],
   },
+  {
+    id: "L043",
+    at: "2026-10-09 19:20",
+    task: "T14",
+    type: "decision",
+    status: "resolved",
+    title: "취소 재시도: SKIP LOCKED 로 집고 next_retry_at 을 1분 미뤄 '처리 중' 표시, 새 요청도 1분 미뤄 생성",
+    detail: "10초 주기 스케줄러가 짧은 트랜잭션에서 `status=PENDING AND next_retry_at <= now … FOR UPDATE SKIP LOCKED LIMIT 10` 으로 집고 next_retry_at = now + 1분(PROCESSING_LEASE) 으로 미룬 뒤 커밋 → 건마다 PaymentCancelExecutor.attempt(PG 호출은 트랜잭션 밖). 실패: 5xx·타임아웃은 1·2·4·8분 백오프, 5회째 또는 PG 4xx 는 MANUAL_REVIEW. 수동 재시도(관리자 API·버튼)는 MANUAL_REVIEW → PENDING 으로 열어 1회 시도, 시도 횟수는 유지되므로 실패하면 즉시 MANUAL_REVIEW.",
+    cause: "같은 건을 두 곳에서 동시에 시도하면 PG 는 cancel_key 로 한 번만 취소하지만 우리 쪽 attempt_count 가 한 라운드에 두 번 올라 재시도 횟수가 빨리 소진됨. 새로 만든 취소 요청을 next_retry_at=now 로 두면 생성 직후의 즉시 시도와 스케줄러가 겹칠 수 있음.",
+    resolution: "집은 건을 미뤄 두고, 생성 시에도 next_retry_at = now + 1분. 서버가 처리 중 죽어도 1분 뒤 다시 대상이 됨. 테스트: 동시 스케줄러 3개 → 각 건 attempt 1, S8 타임라인 출력, 실제 앱에서 스케줄러 5회 → MANUAL_REVIEW → 수동 재시도 성공.",
+    refs: ["docs/02-design.md §4.6"],
+  },
 ];
 </script>
 

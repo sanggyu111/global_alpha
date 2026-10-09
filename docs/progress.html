@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T14",
+  currentTask: "T16",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -112,8 +112,9 @@ const PROGRESS = {
     },
     {
       id: "T14", phase: "dev", title: "결제 취소 재시도 (최대 5회 → MANUAL_REVIEW)",
-      status: "todo", branch: "feat/T14-cancel-retry",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "done", branch: "feat/T14-cancel-retry",
+      checks: { error: true, spec: true }, commits: ["69e0447", "9ad8a50", "43d950f", "977fed2"],
+      note: "backend build 통과 (테스트 159건), frontend lint·build 통과. S8: PENDING/1+1m → 2+2m → 3+4m → 4+8m → MANUAL_REVIEW/5, 6번째 시도 없음. 동시 스케줄러 3개 → 각 건 1회. 실제 앱: 실패율 100% 로 스케줄러가 5회 후 MANUAL_REVIEW → PG 정상화 후 관리자 화면 수동 재시도 → 환불 완료. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T15", phase: "submit", title: "배포 — Railway(백엔드+DB) · Vercel(프론트)",
@@ -134,7 +135,7 @@ const PROGRESS = {
     { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "done" },
     { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "done" },
     { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "done" },
-    { id: "R4", name: "결제 취소 재시도 (최대 횟수 · 운영자 분류)", status: "todo" },
+    { id: "R4", name: "결제 취소 재시도 (최대 횟수 · 운영자 분류)", status: "done" },
   ],
 
   // README 에 답해야 하는 8개 질문 (PDF 2.4)
