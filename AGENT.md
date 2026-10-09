@@ -245,7 +245,7 @@ README 는 제출물 그 자체다. 작업하면서 아래 항목을 **그때그
 4. **커밋**: 의미 단위로 나누어 커밋한다 (10장 Git 규칙. AI 공동 작성자 표시 없음).
 5. **진행 현황 · 작업 로그 갱신**: `docs/progress.html` 의 `PROGRESS` 객체를 갱신하고, 작업 중 생긴 오류·변경은 `docs/worklog.html` 의 `LOG` 에 추가해 같은 브랜치에 커밋한다.
 6. **리뷰**: 검증 결과(실행한 명령과 결과), 설계 대비 충족/미충족 항목, 알려진 한계를 사용자에게 보고한다.
-7. **병합 · 업로드**: 사용자 승인 후 로컬 `main` 에 `git merge --no-ff` 로 병합하고 (squash 금지 — 작업 흐름 보존), `git push origin main` 으로 GitHub 에 올린다. Task 브랜치는 push 하지 않는다.
+7. **병합**: 사용자 승인 후 로컬 `main` 에 `git merge --no-ff` 로 병합한다 (squash 금지 — 작업 흐름 보존). **GitHub push 는 하지 않는다** — 사용자가 명시적으로 요청할 때만 `git push origin main` 한다. Task 브랜치는 push 하지 않는다.
 
 ### 진행 현황 페이지 (`docs/progress.html`)
 
