@@ -43,6 +43,21 @@ staypoint:
   cancel-retry:
     max-attempts: 5
 
+# 모의 PG 장애 주입 (설계 5장). 승인·취소 API 의 ?failRate=&delayMs= 로 요청마다 덮어쓸 수 있다
+mockpg:
+  approve:
+    fail-rate: 0.1
+    delay-ms: 300
+  cancel:
+    fail-rate: 0.0
+  webhook:
+    enabled: true
+    duplicate-count: 2
+    # "/" 로 시작하면 이 앱 자신의 주소 기준
+    url: /api/payments/webhook
+    # 비어 있으면 웹훅을 보내지 않는다. 값은 .env / 플랫폼 환경변수로만 (커밋 금지)
+    secret: ${MOCKPG_WEBHOOK_SECRET:}
+
 ---
 # 데모 데이터(숙소·객실·90일치 재고/요금). 로컬과 데모 배포에서 켠다: SPRING_PROFILES_ACTIVE=seed
 spring:

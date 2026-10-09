@@ -10,6 +10,7 @@ public enum ErrorCode {
 	VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
 	MISSING_HEADER(HttpStatus.BAD_REQUEST, "필수 헤더가 없습니다."),
 	NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다."),
+	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP 메서드입니다."),
 	NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 예약만 처리할 수 있습니다."),
 	SOLD_OUT(HttpStatus.CONFLICT, "선택한 기간에 남은 객실이 없습니다."),
 	RATE_NOT_FOUND(HttpStatus.CONFLICT, "요금이 등록되지 않은 날짜가 포함되어 있습니다."),
@@ -17,6 +18,9 @@ public enum ErrorCode {
 	INVALID_STATE(HttpStatus.CONFLICT, "현재 상태에서는 처리할 수 없습니다."),
 	PAYMENT_IN_PROGRESS(HttpStatus.CONFLICT, "이미 진행 중인 결제가 있습니다."),
 	INVENTORY_BELOW_BOOKED(HttpStatus.CONFLICT, "이미 예약된 수보다 재고를 줄일 수 없습니다."),
+	// 모의 PG 응답용
+	CANCEL_AMOUNT_EXCEEDED(HttpStatus.CONFLICT, "취소 금액이 남은 승인 금액보다 큽니다."),
+	PG_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "결제 대행사가 일시적으로 응답할 수 없습니다."),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 
 	private final HttpStatus status;

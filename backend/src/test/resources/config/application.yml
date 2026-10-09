@@ -4,3 +4,13 @@ staypoint:
   scheduling:
     # 스케줄러가 테스트 데이터를 예고 없이 바꾸지 않게 끈다. 만료 처리는 테스트가 직접 호출한다.
     enabled: false
+
+mockpg:
+  # 테스트가 결과를 예측할 수 있게 기본은 항상 성공 · 지연 없음. 장애는 테스트가 쿼리 파라미터로 주입한다
+  approve:
+    fail-rate: 0.0
+    delay-ms: 0
+  webhook:
+    # 웹훅 테스트만 켠다 (서버 포트가 있어야 보낼 수 있음)
+    enabled: false
+    secret: test-secret

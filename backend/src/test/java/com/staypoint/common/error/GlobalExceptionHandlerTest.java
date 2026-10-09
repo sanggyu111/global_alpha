@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -69,6 +70,27 @@ class GlobalExceptionHandlerTest {
 				.andExpect(jsonPath("$.message").value(ErrorCode.INTERNAL_ERROR.defaultMessage()));
 	}
 
+	@Test
+	void 없는_경로는_500이_아니라_404_NOT_FOUND() throws Exception {
+		mockMvc.perform(get("/no-such-path"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("NOT_FOUND"));
+	}
+
+	@Test
+	void 지원하지_않는_메서드는_405() throws Exception {
+		mockMvc.perform(post("/sold-out"))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
+	}
+
+	@Test
+	void 쿼리_파라미터_타입이_틀리면_400() throws Exception {
+		mockMvc.perform(get("/typed").param("rate", "abc"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+	}
+
 	record NameRequest(@NotBlank String name) {
 	}
 
@@ -87,6 +109,10 @@ class GlobalExceptionHandlerTest {
 
 		@GetMapping("/needs-header")
 		void needsHeader(@RequestHeader("X-User-Id") String userId) {
+		}
+
+		@GetMapping("/typed")
+		void typed(@RequestParam double rate) {
 		}
 
 		@GetMapping("/boom")
