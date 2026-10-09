@@ -264,6 +264,30 @@ const LOG = [
     resolution: "본문을 UTF-8 파일로 저장해 `--data-binary @file` 로 전송 → 201. README 실행 예시는 파일 방식 또는 영문 값 사용.",
     refs: [],
   },
+  {
+    id: "L027",
+    at: "2026-10-09 16:20",
+    task: "T05",
+    type: "change",
+    status: "resolved",
+    title: "S4(만료 예약 결제 거부) API 테스트를 T05 → T07 로 이동",
+    detail: "설계의 T05 완료 조건에 '만료 예약 결제 거부(S4)' 가 있으나 결제 API 는 T07 에서 생김.",
+    cause: "Task 순서상 T05 시점에 결제 요청 경로가 없음.",
+    resolution: "T05 에서는 도메인 `Reservation.assertPayable(now)` (PENDING 아님 → INVALID_STATE, 남은 선점 30초 이하·만료 → HOLD_EXPIRED) 과 단위 테스트까지. 결제 API 에서 호출하는 S4 통합 테스트는 T07 완료 조건에 추가. 02-design.md 12장 수정.",
+    refs: ["docs/02-design.md §12"],
+  },
+  {
+    id: "L028",
+    at: "2026-10-09 16:20",
+    task: "T05",
+    type: "decision",
+    status: "resolved",
+    title: "선점 만료: 건별 트랜잭션 + FOR UPDATE SKIP LOCKED, 재고 복원은 booked_count > 0 조건",
+    detail: "스케줄러가 `SELECT … WHERE status='PENDING' AND hold_expires_at <= now ORDER BY hold_expires_at LIMIT 1 FOR UPDATE SKIP LOCKED` 로 한 건씩 잠가 처리. 1회 실행 최대 100건, 30초 주기. 테스트에서는 `src/test/resources/config/application.yml` 로 스케줄링을 끄고 직접 호출.",
+    cause: "한 트랜잭션에 여러 건을 묶으면 잠금 보유가 길어지고 한 건 실패가 전체를 롤백함. SKIP LOCKED 는 여러 인스턴스·스레드가 같은 예약을 두 번 만료하지 않게 하고, 결제 확정이 잠근 예약도 건너뜀. 재고 복원을 엄격하게(CHECK 위반 시 예외) 하면 이미 어긋난 재고 하나 때문에 그 예약이 영원히 만료되지 않음.",
+    resolution: "복원 날짜 수가 숙박일 수와 다르면 ERROR 로그만 남기고 만료는 진행 → 불일치는 재고 정합 점검(T10, README Q6)으로 발견. 처리 중 예외가 나면 그 실행은 멈추고 다음 주기에 재시도.",
+    refs: ["docs/02-design.md §4.7"],
+  },
 ];
 </script>
 
