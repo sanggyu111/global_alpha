@@ -88,8 +88,9 @@ const PROGRESS = {
     },
     {
       id: "T10", phase: "dev", title: "관리자 API — 예약 목록 · 재고/요금 · 확인 대상",
-      status: "todo", branch: "feat/T10-admin-api",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "review", branch: "feat/T10-admin-api",
+      checks: { error: true, spec: true }, commits: ["be0ed54", "c28f680", "3dd4408", "3f13443"],
+      note: "build 통과 (테스트 150건). 예약 목록 상태·숙소·체크인 필터 + 페이지, 재고 축소가 예약 수 미만이면 전체 거부(S11), 재고 축소·동시 예약 3회 반복 시 booked ≤ total, 요금 변경 후 기존 예약 금액 유지, MANUAL_REVIEW 목록, 불일치 감지 → 재계산 복구. 설계 6장 정정 (L037).",
     },
     {
       id: "T11", phase: "dev", title: "프론트 기반 · 검색 → 예약 → 결제 화면",
