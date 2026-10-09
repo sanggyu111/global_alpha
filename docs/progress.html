@@ -82,8 +82,9 @@ const PROGRESS = {
     },
     {
       id: "T09", phase: "dev", title: "조회 API — 숙소 · 가용 객실 검색",
-      status: "todo", branch: "feat/T09-search-api",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "review", branch: "feat/T09-search-api",
+      checks: { error: true, spec: true }, commits: ["9b6a1e0", "e911c79", "2b8186a", "ae63134", "b2408cc"],
+      note: "build 통과 (테스트 135건). 가용 검색: 다박 부분 매진·정원 초과·요금/재고 누락 제외, 체크아웃 날짜 미포함, 잔여 = 기간 최소, 총액 = 날짜별 합. 내 예약 목록·상세(환불 예정액) 범위 추가 (L035). 시드 데이터로 주말 요금 확인.",
     },
     {
       id: "T10", phase: "dev", title: "관리자 API — 예약 목록 · 재고/요금 · 확인 대상",
@@ -127,7 +128,7 @@ const PROGRESS = {
     { id: "R2", name: "예약 생성 · 재고 선점 (초과예약 방지)", status: "done" },
     { id: "R3", name: "결제 · 모의 PG · 중복 콜백 멱등 · 보상 처리", status: "done" },
     { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "done" },
-    { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "todo" },
+    { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "done" },
     { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "todo" },
     { id: "R4", name: "결제 취소 재시도 (최대 횟수 · 운영자 분류)", status: "todo" },
   ],
