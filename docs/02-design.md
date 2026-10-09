@@ -320,8 +320,8 @@ HAVING i.booked_count <> COUNT(r.id);
 ```
 
 - 감지: 관리자 API `GET /api/admin/inventory/mismatches` 로 위 쿼리 결과 제공 (+ 시간이 남으면 주기 실행 후 로그 경보).
-- 복구: 운영자가 확인 후 `booked_count` 를 기대값으로 보정 (자동 보정은 하지 않음 — 원인 파악 전 덮어쓰면 버그를 숨김).
-- 만료 직전(PENDING 이지만 만료 시각 경과, 스케줄러 미처리) 행은 일시적 불일치로 보일 수 있음 → 쿼리에서 만료 시각 경과분은 제외하거나 표시.
+- 복구: 운영자가 원인을 확인한 뒤 **재계산 API**(`POST /api/admin/room-types/{id}/inventory/{date}/recount`)로 해당 날짜의 `booked_count` 를 예약 테이블 기준 값으로 맞춘다. 재고 행을 `FOR UPDATE` 로 잠근 뒤 활성 예약을 세므로, 동시에 진행 중인 예약 생성·만료·취소와 겹쳐도 어긋나지 않는다 (그 트랜잭션들도 같은 재고 행을 잠금). 자동 보정은 하지 않음 — 원인 파악 전 덮어쓰면 버그를 숨김.
+- **[T10 정정, L037]** 만료 시각이 지난 PENDING 도 스케줄러가 처리하기 전까지는 재고를 쥐고 있으므로 기대값에 **포함**한다 (상태 변경과 재고 복원이 같은 트랜잭션이라 이렇게 세면 일시적 불일치가 생기지 않음). 처음 설계의 "만료 경과분 제외" 는 오히려 정상 데이터를 불일치로 보이게 함.
 
 ---
 
@@ -355,6 +355,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | GET | `/api/admin/payment-cancels?status=MANUAL_REVIEW` | 운영자 확인 대상 | UI-5, RTY-3 |
 | POST | `/api/admin/payment-cancels/{id}/retry` | 수동 재시도 | RTY-3 |
 | GET | `/api/admin/inventory/mismatches` | 재고 정합 점검 | Q6 |
+| POST | `/api/admin/room-types/{id}/inventory/{date}/recount` | 재고 재계산 (booked_count ← 활성 예약 수) | Q6 |
 
 ### 주요 에러 코드
 
