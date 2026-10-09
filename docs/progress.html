@@ -70,8 +70,9 @@ const PROGRESS = {
     },
     {
       id: "T07", phase: "dev", title: "결제 · 확정 · 멱등 · 보상 처리",
-      status: "todo", branch: "feat/T07-payment",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "review", branch: "feat/T07-payment",
+      checks: { error: true, spec: true }, commits: ["a930043", "7f95025", "b6fc1ce", "ddb2b68", "68b133b", "3e40a44"],
+      note: "build 통과 (테스트 98건, 결제 테스트 3회 반복 동일). S4 만료 결제 거부, S5 통지 3회 동시 → 확정 1회, S6 다른 키 연타 → 승인 1건, S7 만료·금액 불일치 → 보상 취소 성공, PG 거절 → MANUAL_REVIEW. 타임아웃 → PROCESSING → 상태 확정 스케줄러 확정. 실제 앱에서 웹훅 2회 중복 도착 확인.",
     },
     {
       id: "T08", phase: "dev", title: "취소 · 환불 + 환불 계산 테스트",
@@ -122,8 +123,8 @@ const PROGRESS = {
 
   // 과제 필수 요구사항 (PDF 2.3) — 우선순위 순
   requirements: [
-    { id: "R2", name: "예약 생성 · 재고 선점 (초과예약 방지)", status: "in-progress" },
-    { id: "R3", name: "결제 · 모의 PG · 중복 콜백 멱등 · 보상 처리", status: "todo" },
+    { id: "R2", name: "예약 생성 · 재고 선점 (초과예약 방지)", status: "done" },
+    { id: "R3", name: "결제 · 모의 PG · 중복 콜백 멱등 · 보상 처리", status: "done" },
     { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "todo" },
     { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "todo" },
     { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "todo" },
