@@ -46,9 +46,9 @@ const PROGRESS = {
     },
     {
       id: "T03", phase: "dev", title: "백엔드 기반 — Spring Boot · compose · Flyway V1 · 시드 · Testcontainers",
-      status: "blocked", branch: "feat/T03-backend-base",
-      checks: { error: null, spec: null }, commits: [],
-      note: "코드 작성 완료. 컴파일·단위 테스트 통과. Docker 미설치로 Testcontainers 테스트 대기 (L022). Boot 4.1.1 로 설계 변경 (L021).",
+      status: "review", branch: "feat/T03-backend-base",
+      checks: { error: true, spec: true }, commits: ["11ff533", "34d4b0c", "4b8eba9", "af3b941", "5a49cb2", "f08d0d3"],
+      note: "./gradlew build 통과 (테스트 16건, Testcontainers 포함). compose 빈 DB 에 V1 + 시드 적용, /actuator/health UP. Boot 4.1.1 (L021). Docker 는 WSL 설치 후 동작 (L023).",
     },
     {
       id: "T04", phase: "dev", title: "예약 생성 · 재고 선점 + 동시 예약 테스트",
