@@ -9,6 +9,7 @@ public enum ErrorCode {
 
 	VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
 	MISSING_HEADER(HttpStatus.BAD_REQUEST, "필수 헤더가 없습니다."),
+	UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패했습니다."),
 	NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다."),
 	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP 메서드입니다."),
 	NOT_OWNER(HttpStatus.FORBIDDEN, "본인의 예약만 처리할 수 있습니다."),
