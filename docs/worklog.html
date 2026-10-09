@@ -504,6 +504,18 @@ const LOG = [
     resolution: "로컬 확인: 이미지 빌드 554MB, 컨테이너를 PORT=8081 · DB 환경변수로 실행 → 헬스 UP, 예약 → 결제 CONFIRMED (컨테이너 안 모의 PG 자기 호출·웹훅 동작, 확정 actor=system:pg-webhook). 테스트는 로컬 ./gradlew test 로 검증.",
     refs: ["docs/02-design.md §11"],
   },
+  {
+    id: "L047",
+    at: "2026-10-09 20:55",
+    task: "T15",
+    type: "error",
+    status: "resolved",
+    title: "Railway 백엔드 CRASHED — DB_URL 참조 변수가 치환되지 않음",
+    detail: "첫 배포: 저장소 연결 직후 DB·변수 없이 시작해 실패(예상된 실패, 메일 링크는 404). 변수 추가 후에도 CRASHED, Deploy Logs: `Driver org.postgresql.Driver claims to not accept jdbcUrl, jdbc:postgresql://{{Postgres.PGHOST}}:{{Postgres.PGPORT}}/{{Postgres.PGDATABASE}}` (flywayInitializer). 로그 첫 줄만 보고 메모리 부족(OOM)을 의심했으나, 로컬에서 --memory=512m 로 재현해 보니 약 300MB 로 정상 기동 → 메모리 원인 아님.",
+    cause: "Railway 참조 변수를 `{{Postgres.PGHOST}}` 처럼 `$` 없이 입력 → Railway 가 치환하지 않고 글자 그대로 앱에 전달. DB 서비스 이름(Postgres)은 맞았음 (스크린샷으로 확인).",
+    resolution: "Raw Editor 로 `${{Postgres.PGHOST}}` 형식으로 다시 입력 → 배포 성공. 배포 URL 에서 헬스 UP, 예약 → 결제 CONFIRMED(1.0초), PG 지연 5초 → 웹훅으로 확정, 취소 100% 환불 SUCCEEDED, 불일치·확인 대상 0 확인. README 배포 순서에 '$ 누락 시 치환 안 됨' 주의 추가.",
+    refs: ["README.md 배포"],
+  },
 ];
 </script>
 

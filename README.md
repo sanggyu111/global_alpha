@@ -127,7 +127,7 @@ Vercel (frontend/) ──BACKEND_URL──▶ Railway 백엔드 서비스 (backe
 
 1. **Railway** — New Project → Deploy from GitHub repo → 이 저장소 (`railway.toml` 이 Dockerfile 빌드를 지정)
 2. 같은 프로젝트에 **+ New → Database → PostgreSQL** 추가
-3. 백엔드 서비스 **Variables** (`${{Postgres.…}}` 는 Railway 참조 변수 문법):
+3. 백엔드 서비스 **Variables** → **Raw Editor** 에 붙여 넣기 (`${{Postgres.…}}` 는 Railway 참조 변수 문법 — **`$` 를 빠뜨리면 치환되지 않고 글자 그대로 전달된다**. `Postgres` 는 DB 서비스 카드의 이름):
 
    | 변수 | 값 |
    |---|---|
