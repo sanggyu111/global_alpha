@@ -64,8 +64,9 @@ const PROGRESS = {
     },
     {
       id: "T06", phase: "dev", title: "모의 PG — 승인 · 조회 · 취소 · 장애 주입 · 웹훅",
-      status: "todo", branch: "feat/T06-mock-pg",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "review", branch: "feat/T06-mock-pg",
+      checks: { error: true, spec: true }, commits: ["cf229e9", "0eec13c", "5b197a3"],
+      note: "build 통과 (테스트 73건). 실패율 0/1·지연 동작, 같은 orderId 재승인 → 처음 결과(동시 5회도 1건), 같은 cancelKey → 1회만 취소, 취소 503 주입 후 같은 키 재시도 성공, 웹훅 3회 전송(비밀값 헤더). 404 가 500 으로 나가던 공통 에러 버그 수정 (L030).",
     },
     {
       id: "T07", phase: "dev", title: "결제 · 확정 · 멱등 · 보상 처리",
