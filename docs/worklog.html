@@ -408,6 +408,30 @@ const LOG = [
     resolution: "최종 방어선은 CHECK(booked ≤ total). 재고 축소와 10명 동시 예약을 3회 반복해 booked = 성공 예약 수 ≤ total 확인. 날짜 범위는 양 끝 포함, 최대 366일.",
     refs: [],
   },
+  {
+    id: "L039",
+    at: "2026-10-09 19:10",
+    task: "T11",
+    type: "decision",
+    status: "resolved",
+    title: "프론트 경계: 백엔드 호출은 서버 전용(server-only), 기본 no-store, 멱등 키는 폼(서버)·결제(sessionStorage)",
+    detail: "create-next-app@15 → Next 15.5.27 / React 19.1. lib/api.ts 에 `import \"server-only\"` → 클라이언트 컴포넌트가 실수로 import 하면 빌드 실패 (BACKEND_URL 노출 방지). fetch 기본 cache: no-store, 숙소 목록·상세만 next.revalidate 60. 예약 폼: 서버가 그릴 때 crypto.randomUUID() 를 hidden 필드로 → 같은 폼 연타는 같은 키. 결제: PayPanel(클라이언트)이 sessionStorage 에 예약별 키 보관, FAILED 면 새 키(같은 키는 같은 실패를 돌려주므로), PROCESSING 이면 2초 간격 router.refresh 최대 15회.",
+    cause: "추가 의존성 server-only(Next 공식 권장, 0.0.1): 이유 = 서버 전용 코드가 브라우저 번들로 새는 것을 빌드에서 차단. 상태관리·데이터 패칭 라이브러리는 추가하지 않음 (서버 컴포넌트 fetch + Server Action 으로 충분).",
+    resolution: "검증: npm run lint·build, 그리고 저장소 밖 임시 폴더의 playwright-core 로 설치된 Chrome 을 구동해 S1 3가지(정상·거절 후 재결제·지연) 수행. 프로젝트 의존성에는 E2E 도구를 넣지 않음 (시간 대비 가치 낮음, README '시간이 더 있었다면' 후보).",
+    refs: ["docs/02-design.md §8"],
+  },
+  {
+    id: "L040",
+    at: "2026-10-09 19:10",
+    task: "T11",
+    type: "fix",
+    status: "resolved",
+    title: "create-next-app 기본 .gitignore 가 .env.example 까지 제외",
+    detail: "템플릿 frontend/.gitignore 의 `.env*` 규칙 때문에 frontend/.env.example 이 커밋되지 않음 (AGENT.md 9장: .env.example 만 커밋).",
+    cause: "템플릿 기본값이 모든 env 파일을 무시.",
+    resolution: "`!.env.example` 예외 추가 → git check-ignore 로 .env.example 은 추적, .env.local 은 무시 확인.",
+    refs: [],
+  },
 ];
 </script>
 
