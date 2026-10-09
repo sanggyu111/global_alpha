@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T08",
+  currentTask: "T09",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -76,9 +76,9 @@ const PROGRESS = {
     },
     {
       id: "T08", phase: "dev", title: "취소 · 환불 + 환불 계산 테스트",
-      status: "review", branch: "feat/T08-cancel-refund",
+      status: "done", branch: "feat/T08-cancel-refund",
       checks: { error: true, spec: true }, commits: ["60b9c4c", "d30b074", "8736331", "70d4412", "7a3a826", "0eb4327", "6283997", "5c11527"],
-      note: "build 통과 (테스트 119건). 환불 경계값 D=8·7·6·3·2·1·0·-1 → 100·100·70·70·50·50·0·0%, 원 단위 내림. 전액·부분(70%) 환불, 당일 0원(PG 호출 없음), PENDING 취소, 재취소·동시 3회 취소 → 1회 처리(S9), 결제 중 취소 → 보상 취소. cancellation 패키지 분리 (L033).",
+      note: "build 통과 (테스트 119건). 환불 경계값 D=8·7·6·3·2·1·0·-1 → 100·100·70·70·50·50·0·0%, 원 단위 내림. 전액·부분(70%) 환불, 당일 0원(PG 호출 없음), PENDING 취소, 재취소·동시 3회 취소 → 1회 처리(S9), 결제 중 취소 → 보상 취소. cancellation 패키지 분리 (L033). 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T09", phase: "dev", title: "조회 API — 숙소 · 가용 객실 검색",
