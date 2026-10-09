@@ -1,8 +1,13 @@
 package com.staypoint.reservation;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
+
+import com.staypoint.common.error.BusinessException;
+import com.staypoint.common.error.ErrorCode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,11 +20,16 @@ import jakarta.persistence.Table;
 
 /**
  * 예약. 상태는 도메인 메서드로만 바꾼다 (AGENT.md 5장).
- * 이번 Task(T04)는 생성(PENDING)만 다루고, 확정·취소·만료 전이는 T05·T07·T08 에서 추가한다.
+ * 상태를 바꾸는 호출자는 먼저 예약 행을 잠가야 한다 (설계 4.3). 확정·취소 전이는 T07·T08 에서 추가한다.
  */
 @Entity
 @Table(name = "reservation")
 public class Reservation {
+
+	public static final String CANCEL_REASON_HOLD_EXPIRED = "HOLD_EXPIRED";
+
+	/** 결제를 시작하려면 선점이 최소 이만큼 남아 있어야 한다 (설계 4.7). */
+	public static final Duration PAYMENT_MIN_REMAINING = Duration.ofSeconds(30);
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -107,6 +117,50 @@ public class Reservation {
 		return r;
 	}
 
+	/**
+	 * 선점 만료: PENDING → CANCELED(HOLD_EXPIRED). 재고 복원은 호출한 쪽이 같은 트랜잭션에서 한다.
+	 *
+	 * @return 전이 전 상태 (이력 기록용)
+	 */
+	public ReservationStatus expire(Instant now) {
+		if (holdExpiresAt.isAfter(now)) {
+			throw new BusinessException(ErrorCode.INVALID_STATE, "아직 선점 시간이 남아 있습니다.",
+					Map.of("holdExpiresAt", holdExpiresAt.toString()));
+		}
+		ReservationStatus from = transitionTo(ReservationStatus.CANCELED, now);
+		this.canceledAt = now;
+		this.cancelReason = CANCEL_REASON_HOLD_EXPIRED;
+		return from;
+	}
+
+	/**
+	 * 결제를 시작해도 되는지 검사한다 (설계 4.7). 만료 스케줄러가 아직 돌지 않았더라도
+	 * 만료 시각이 지났으면 거부한다. 남은 시간이 너무 짧아도 거부해 "결제 직후 만료" 경합을 줄인다.
+	 * 정확성은 결제 반영 시 예약 행 잠금 + 상태 재확인이 보장하고, 이 검사는 사용자 경험 개선용이다.
+	 */
+	public void assertPayable(Instant now) {
+		if (status != ReservationStatus.PENDING) {
+			throw new BusinessException(ErrorCode.INVALID_STATE, "결제할 수 없는 예약 상태입니다: " + status,
+					Map.of("status", status.name()));
+		}
+		if (!now.plus(PAYMENT_MIN_REMAINING).isBefore(holdExpiresAt)) {
+			throw new BusinessException(ErrorCode.HOLD_EXPIRED, ErrorCode.HOLD_EXPIRED.defaultMessage(),
+					Map.of("holdExpiresAt", holdExpiresAt.toString()));
+		}
+	}
+
+	/** 모든 상태 변경은 여기를 거친다. 허용되지 않은 전이는 예외. */
+	private ReservationStatus transitionTo(ReservationStatus to, Instant now) {
+		if (!status.canTransitionTo(to)) {
+			throw new BusinessException(ErrorCode.INVALID_STATE, status + " → " + to + " 전이는 허용되지 않습니다.",
+					Map.of("from", status.name(), "to", to.name()));
+		}
+		ReservationStatus from = this.status;
+		this.status = to;
+		this.updatedAt = now;
+		return from;
+	}
+
 	public Long getId() {
 		return id;
 	}
@@ -153,6 +207,14 @@ public class Reservation {
 
 	public Instant getHoldExpiresAt() {
 		return holdExpiresAt;
+	}
+
+	public Instant getCanceledAt() {
+		return canceledAt;
+	}
+
+	public String getCancelReason() {
+		return cancelReason;
 	}
 
 	public String getIdempotencyKey() {
