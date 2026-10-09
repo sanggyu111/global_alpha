@@ -15,12 +15,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.staypoint.reservation.HoldExpiryService;
+import com.staypoint.support.ApiIntegrationTest;
 import com.staypoint.support.HttpTestClient.Response;
 
 /**
  * 결제 요청 → 모의 PG(HTTP) → 확정 (설계 4.4, FR-PAY-4·6, S4 · S6, 타임아웃).
  */
-class PaymentFlowTest extends PaymentTestSupport {
+class PaymentFlowTest extends ApiIntegrationTest {
 
 	@Autowired
 	HoldExpiryService holdExpiryService;

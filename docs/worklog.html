@@ -336,6 +336,30 @@ const LOG = [
     resolution: "잠그기 전에는 `SELECT p.reservationId` 처럼 값만 조회하고, 예약 → 결제 잠금 조회가 각 엔티티의 첫 조회가 되게 함. S5(같은 통지 동시 3회 → 확정 1회) 테스트로 확인.",
     refs: [],
   },
+  {
+    id: "L033",
+    at: "2026-10-09 18:10",
+    task: "T08",
+    type: "change",
+    status: "resolved",
+    title: "설계 변경: 취소·환불을 reservation 이 아닌 cancellation 패키지로 분리",
+    detail: "설계 2.1 에서는 reservation 패키지가 '예약 생성·조회·취소' 를 맡았으나, 취소는 결제 환불(payment)까지 다룸. payment 는 이미 reservation 에 의존(결제 확정 시 예약 잠금·전이) → reservation 에 취소를 두면 reservation ↔ payment 순환 의존.",
+    cause: "취소는 예약·재고·결제를 한 트랜잭션에서 함께 바꾸는 유스케이스라 어느 한 도메인 패키지에 속하지 않음.",
+    resolution: "`cancellation` 패키지(RefundPolicy, CancellationProcessor(트랜잭션), CancellationService(커밋 후 PG 환불), Controller) 신설. 의존 방향: cancellation → reservation·payment, payment → reservation. 02-design.md 2.1 먼저 수정.",
+    refs: ["docs/02-design.md §2.1"],
+  },
+  {
+    id: "L034",
+    at: "2026-10-09 18:10",
+    task: "T08",
+    type: "decision",
+    status: "resolved",
+    title: "취소 API 는 Idempotency-Key 없이 멱등, 환불 실패해도 취소는 성공",
+    detail: "POST /api/reservations/{id}/cancel: 예약 잠금 → (CANCELED 면 저장된 결과 반환) → CONFIRMED 면 승인 결제 잠금 · RefundPolicy 로 환불액 계산 · 0원 초과면 payment_cancel(USER_CANCEL, cancel_key=USER-{paymentId}) → cancelByUser → 재고 복원 → 이력. 커밋 후 PG 환불 1회 시도.",
+    cause: "'이 예약을 취소' 는 몇 번 보내도 결과가 같은 요청이라 별도 키 없이 상태(CANCELED)로 중복을 판단할 수 있음. PG 환불은 외부 호출이라 실패할 수 있으나, 예약 취소·재고 복원까지 되돌릴 이유는 없음.",
+    resolution: "환불 실패(5xx·타임아웃)는 payment_cancel 이 PENDING 으로 남아 재시도(T14), PG 거절(4xx)은 MANUAL_REVIEW. 응답의 refundStatus 로 사용자·화면에 노출. PENDING 예약 취소 중 진행 중이던 결제가 나중에 승인되면 T07 의 보상 취소가 처리 (테스트로 확인).",
+    refs: ["docs/02-design.md §4.5"],
+  },
 ];
 </script>
 

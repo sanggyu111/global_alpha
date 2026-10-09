@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T08",
+  currentTask: "T09",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -76,8 +76,9 @@ const PROGRESS = {
     },
     {
       id: "T08", phase: "dev", title: "취소 · 환불 + 환불 계산 테스트",
-      status: "todo", branch: "feat/T08-cancel-refund",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "done", branch: "feat/T08-cancel-refund",
+      checks: { error: true, spec: true }, commits: ["60b9c4c", "d30b074", "8736331", "70d4412", "7a3a826", "0eb4327", "6283997", "5c11527"],
+      note: "build 통과 (테스트 119건). 환불 경계값 D=8·7·6·3·2·1·0·-1 → 100·100·70·70·50·50·0·0%, 원 단위 내림. 전액·부분(70%) 환불, 당일 0원(PG 호출 없음), PENDING 취소, 재취소·동시 3회 취소 → 1회 처리(S9), 결제 중 취소 → 보상 취소. cancellation 패키지 분리 (L033). 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T09", phase: "dev", title: "조회 API — 숙소 · 가용 객실 검색",
@@ -125,7 +126,7 @@ const PROGRESS = {
   requirements: [
     { id: "R2", name: "예약 생성 · 재고 선점 (초과예약 방지)", status: "done" },
     { id: "R3", name: "결제 · 모의 PG · 중복 콜백 멱등 · 보상 처리", status: "done" },
-    { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "todo" },
+    { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "done" },
     { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "todo" },
     { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "todo" },
     { id: "R4", name: "결제 취소 재시도 (최대 횟수 · 운영자 분류)", status: "todo" },
