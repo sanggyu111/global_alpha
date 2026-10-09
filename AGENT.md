@@ -35,9 +35,10 @@ ZIVO 채용 사전 과제 — 가상의 호텔 예약 서비스 **STAYPOINT** �
 
 | 영역 | 고정 | 기본값 (변경 시 README 에 이유 기록) |
 |---|---|---|
-| 프론트엔드 | **Next.js** | App Router, TypeScript |
-| 백엔드 | **Java + Spring Boot** | Java 21, Spring Boot 3.x, Gradle |
-| DB | **PostgreSQL** | PostgreSQL 15 (ZIVO 운영 버전과 동일), Flyway 마이그레이션 |
+| 프론트엔드 | **Next.js** | Next.js 15, App Router, TypeScript, 서버 컴포넌트 fetch + Server Actions |
+| 백엔드 | **Java + Spring Boot** | Java 17, Spring Boot 3.5.x, Gradle (Groovy), Spring Data JPA + 재고 차감 네이티브 쿼리 |
+| DB | **PostgreSQL** | PostgreSQL 15 (ZIVO 운영 버전과 동일), Flyway 마이그레이션, 로컬은 docker compose, 테스트는 Testcontainers |
+| 배포 | — | Railway (백엔드 + PostgreSQL), Vercel (프론트) |
 
 - ORM/쿼리 방식(JPA / MyBatis / JDBC), 데이터 패칭 방식, 상태관리, 배포처 등은 **결정하는 순간 README 의 "기술 선택" 섹션에 이유와 버린 대안을 함께 기록**한다. "익숙해서" 도 유효한 이유지만 그렇게 적는다.
 - 새 라이브러리를 추가할 때도 같은 규칙을 따른다. 이유를 적을 수 없는 의존성은 추가하지 않는다.
