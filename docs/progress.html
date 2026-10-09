@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T12",
+  currentTask: "T13",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -100,9 +100,9 @@ const PROGRESS = {
     },
     {
       id: "T12", phase: "dev", title: "프론트 내 예약 · 취소",
-      status: "review", branch: "feat/T12-frontend-my",
+      status: "done", branch: "feat/T12-frontend-my",
       checks: { error: true, spec: true }, commits: ["32b0523", "52a2b51"],
-      note: "npm run lint · build 통과. 실제 브라우저로 확인: 내 예약 목록 → 상세(지금 취소 시 100% 156,000원 안내) → 확인 창 → 취소됨·환불 완료 표시, 취소 버튼 사라짐, 숙소 화면 잔여 8 → 7(예약) → 8(취소).",
+      note: "npm run lint · build 통과. 실제 브라우저로 확인: 내 예약 목록 → 상세(지금 취소 시 100% 156,000원 안내) → 확인 창 → 취소됨·환불 완료 표시, 취소 버튼 사라짐, 숙소 화면 잔여 8 → 7(예약) → 8(취소). 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T13", phase: "dev", title: "프론트 관리자 화면",
