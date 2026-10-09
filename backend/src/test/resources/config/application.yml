@@ -1,0 +1,6 @@
+# 테스트 전용 설정. Spring Boot 는 classpath:/application.yml 과 classpath:/config/application.yml 을
+# 모두 읽고 config/ 쪽이 우선하므로, 여기에는 테스트에서 바꿀 값만 둔다.
+staypoint:
+  scheduling:
+    # 스케줄러가 테스트 데이터를 예고 없이 바꾸지 않게 끈다. 만료 처리는 테스트가 직접 호출한다.
+    enabled: false
