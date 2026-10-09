@@ -1,0 +1,18 @@
+# 줄바꿈 정책: 저장소와 작업 디렉터리 모두 LF 로 고정 (core.autocrlf 설정과 무관하게 동일 동작)
+* text=auto eol=lf
+
+# Windows 전용 스크립트만 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 바이너리
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.jar binary
+*.woff binary
+*.woff2 binary
