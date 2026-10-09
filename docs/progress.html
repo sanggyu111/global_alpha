@@ -15,12 +15,12 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T02",
+  currentTask: "T03",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
-    { id: "design", name: "설계",        status: "in-progress" },
-    { id: "dev",    name: "개발 ⇄ 리뷰", status: "todo" },
+    { id: "design", name: "설계",        status: "done" },
+    { id: "dev",    name: "개발 ⇄ 리뷰", status: "in-progress" },
     { id: "submit", name: "제출 준비",   status: "todo" },
   ],
 
@@ -40,14 +40,15 @@ const PROGRESS = {
     },
     {
       id: "T02", phase: "design", title: "설계 — docs/02-design.md (ERD · API · 동시성 · Task 목록)",
-      status: "review", branch: "docs/design",
+      status: "done", branch: "docs/design",
       checks: { error: true, spec: true }, commits: ["4d0f58b", "a519cbe"],
-      note: "조건부 UPDATE 재고 차감, PG 호출 트랜잭션 밖 + applyResult 멱등, payment_cancel 아웃박스. 사용자 리뷰 대기.",
+      note: "조건부 UPDATE 재고 차감, PG 호출 트랜잭션 밖 + applyResult 멱등, payment_cancel 아웃박스. 사용자 리뷰 승인.",
     },
     {
       id: "T03", phase: "dev", title: "백엔드 기반 — Spring Boot · compose · Flyway V1 · 시드 · Testcontainers",
-      status: "todo", branch: "feat/T03-backend-base",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "review", branch: "feat/T03-backend-base",
+      checks: { error: true, spec: true }, commits: ["11ff533", "34d4b0c", "4b8eba9", "af3b941", "5a49cb2", "f08d0d3"],
+      note: "./gradlew build 통과 (테스트 16건, Testcontainers 포함). compose 빈 DB 에 V1 + 시드 적용, /actuator/health UP. Boot 4.1.1 (L021). Docker 는 WSL 설치 후 동작 (L023).",
     },
     {
       id: "T04", phase: "dev", title: "예약 생성 · 재고 선점 + 동시 예약 테스트",
