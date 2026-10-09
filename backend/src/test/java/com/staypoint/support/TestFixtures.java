@@ -17,7 +17,7 @@ public class TestFixtures {
 
 	public void truncateAll() {
 		jdbc.execute("TRUNCATE property, room_type, room_inventory, room_rate, reservation, "
-				+ "reservation_history, payment, payment_cancel RESTART IDENTITY CASCADE");
+				+ "reservation_history, payment, payment_cancel, mockpg_payment, mockpg_cancel RESTART IDENTITY CASCADE");
 	}
 
 	/** 정원 capacity 인 객실 타입을 만들고, from ~ to(미포함) 날짜마다 재고 total 실과 1박 price 원을 등록한다. */
