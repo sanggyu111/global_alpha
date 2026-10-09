@@ -1,6 +1,7 @@
 package com.staypoint.reservation;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,9 @@ import jakarta.persistence.LockModeType;
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
 	Optional<Reservation> findByUserIdAndIdempotencyKey(String userId, String idempotencyKey);
+
+	/** 내 예약 목록 (최근 것부터). 화면 한 장에 충분한 개수만. */
+	List<Reservation> findTop100ByUserIdOrderByCreatedAtDesc(String userId);
 
 	/** 상태를 바꾸기 전에 예약 행을 잠근다 (SELECT … FOR UPDATE). 잠금 순서: reservation → payment → room_inventory. */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)

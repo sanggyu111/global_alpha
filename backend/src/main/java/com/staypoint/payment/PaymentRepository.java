@@ -19,6 +19,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
 	boolean existsByReservationIdAndStatusIn(Long reservationId, Collection<PaymentStatus> statuses);
 
+	/** 예약의 가장 최근 결제 시도 (화면 표시용). */
+	Optional<Payment> findFirstByReservationIdOrderByIdDesc(Long reservationId);
+
 	/**
 	 * 잠그기 전에 예약 id 만 알아낸다. 엔티티를 먼저 읽어 두면 뒤의 잠금 조회가 영속성 컨텍스트에 있던
 	 * (잠그기 전의 낡은) 상태를 그대로 돌려주므로, 잠금 조회가 이 결제의 첫 조회가 되게 한다.
