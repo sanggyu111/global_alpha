@@ -58,8 +58,9 @@ backend/src/main/java/com/staypoint/
 ├── common/        # 에러 응답, Clock 설정, 공통 예외
 ├── property/      # 숙소·객실 타입 조회, 가용 객실 검색
 ├── inventory/     # 날짜별 재고·요금 (재고 차감 네이티브 쿼리가 여기)
-├── reservation/   # 예약 생성·조회·취소, 상태 전이, 선점 만료 스케줄러
+├── reservation/   # 예약 생성·조회, 상태 전이, 선점 만료 스케줄러
 ├── payment/       # 결제 요청, 승인 결과 반영(웹훅), 취소 재시도·상태 확정 스케줄러, PG 클라이언트
+├── cancellation/  # 예약 취소·환불 (RefundPolicy). 예약과 결제를 함께 다루므로 분리 → 의존 방향 cancellation → reservation·payment, payment → reservation (순환 없음, L033)
 ├── mockpg/        # 모의 PG (컨트롤러 + 자체 테이블). payment 패키지와 코드 의존 없음
 └── admin/         # 관리자 API
 ```
