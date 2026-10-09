@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T13",
+  currentTask: "T14",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -106,9 +106,9 @@ const PROGRESS = {
     },
     {
       id: "T13", phase: "dev", title: "프론트 관리자 화면",
-      status: "review", branch: "feat/T13-frontend-admin",
+      status: "done", branch: "feat/T13-frontend-admin",
       checks: { error: true, spec: true }, commits: ["7ff846d", "c40ee94", "76acfe7", "829fde6"],
-      note: "npm run lint · build 통과. 실제 브라우저로 확인: 예약 26건 → 20+6 페이지, 상태·숙소 필터(URL 유지), 재고 0 시도 → 거부 사유(날짜) 표시, 요금 변경 → 달력 반영, MANUAL_REVIEW 목록, 불일치 → 재계산 → 없음.",
+      note: "npm run lint · build 통과. 실제 브라우저로 확인: 예약 26건 → 20+6 페이지, 상태·숙소 필터(URL 유지), 재고 0 시도 → 거부 사유(날짜) 표시, 요금 변경 → 달력 반영, MANUAL_REVIEW 목록, 불일치 → 재계산 → 없음. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T14", phase: "dev", title: "결제 취소 재시도 (최대 5회 → MANUAL_REVIEW)",
