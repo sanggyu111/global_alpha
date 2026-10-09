@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STAYPOINT 작업 로그</title>
+
+<!--
+  ===================================================================
+  작업 로그 데이터 — 이 배열에 항목을 추가만 한다 (수정·삭제 대신 새 항목으로 정정). AGENT.md 13장
+  type  : error(오류) | change(계획·요구 변경) | decision(결정) | fix(수정)
+  status: resolved(해결) | open(미해결) | watch(관찰 중)
+  ===================================================================
+-->
+<script>
+const LOG = [
+  {
+    id: "L001", at: "2026-10-09 12:32", task: "T00", type: "decision", status: "resolved",
+    title: "공통 규칙 파일을 AGENT.md 하나로 두고 CLAUDE.md 는 import",
+    detail: "AGENT.md 와 CLAUDE.md 내용을 공통으로 유지하라는 요구. 두 파일에 같은 내용을 복사하면 어긋날 수 있음.",
+    resolution: "규칙 본문은 AGENT.md 에만 작성, CLAUDE.md 는 `@AGENT.md` 로 불러오고 Claude 전용 3줄만 둠.",
+    refs: ["c8965ed", "AGENT.md", "CLAUDE.md"],
+  },
+  {
+    id: "L002", at: "2026-10-09 12:32", task: "T00", type: "change", status: "resolved",
+    title: "커밋에서 Claude 공동 작성자 표시 제거",
+    detail: "사용자 요청: git 에 올릴 때 Co-Authored-By Claude 표시를 빼달라.",
+    resolution: "AGENT.md 10장 Git 규칙에 명시. 모든 커밋에서 Co-Authored-By 없음을 확인.",
+    refs: ["AGENT.md §10"],
+  },
+  {
+    id: "L003", at: "2026-10-09 12:32", task: "T00", type: "error", status: "watch",
+    title: "커밋 시 'LF will be replaced by CRLF' 경고",
+    detail: "Windows 환경에서 git 설정 core.autocrlf=true. 커밋할 때마다 줄바꿈 변환 경고가 출력됨.",
+    cause: "작업 디렉터리는 CRLF, 저장소는 LF 로 저장되는 autocrlf 동작. 커밋 내용 자체는 정상.",
+    resolution: "현재는 무해한 경고로 판단. 백엔드 셸 스크립트(gradlew)·도커 파일이 들어오기 전에 .gitattributes 로 줄바꿈 정책을 고정할 예정 (L008 참고).",
+    refs: ["core.autocrlf=true"],
+  },
+  {
+    id: "L004", at: "2026-10-09 12:40", task: "T00", type: "error", status: "open",
+    title: "GitHub CLI(gh) 미설치 — 저장소 공개 여부 확인·PR 생성 불가",
+    detail: "`gh: command not found`. GitHub 연결 시 저장소 상태(private 여부)를 확인할 수 없었음.",
+    cause: "로컬에 gh 가 설치되지 않음. 원격(origin)은 이미 https://github.com/sanggyu111/global_alpha.git 로 연결되어 있었음.",
+    resolution: "git push 는 정상 동작해 연결 완료. 과제가 private 저장소를 요구하므로 공개 여부는 사용자가 GitHub Settings 에서 직접 확인 필요.",
+    refs: ["origin"],
+  },
+  {
+    id: "L005", at: "2026-10-09 12:45", task: "T00", type: "change", status: "resolved",
+    title: "개발 프로세스 정의 + 진행 현황 HTML 추가 요구",
+    detail: "기획 → 설계 → (개발 ⇄ 리뷰) 반복, Task 별 브랜치, 커밋 전 오류·설계 충족 검사. 작업 중 요청이 한 번 중단된 뒤 '진행 현황 HTML' 요구가 추가되어 다시 들어옴.",
+    resolution: "AGENT.md 13장에 절차 명문화, docs/progress.html 추가.",
+    refs: ["e26e7c0", "docs/progress.html"],
+  },
+  {
+    id: "L006", at: "2026-10-09 13:09", task: "T00", type: "decision", status: "resolved",
+    title: "병합 방식: 로컬 main 에 --no-ff 병합 후 main 만 push (A 방식)",
+    detail: "로컬 병합 vs 브랜치 push + GitHub PR 중 선택. gh 미설치(L004)로 PR 자동화는 어려운 상황.",
+    resolution: "사용자가 A 방식 선택. AGENT.md 13장 7단계 수정, T00 병합 후 push 완료.",
+    refs: ["54b556e", "23ac73a"],
+  },
+  {
+    id: "L007", at: "2026-10-09 13:11", task: "T01", type: "fix", status: "resolved",
+    title: "기획 문서 환불 예시 표기 오류 수정",
+    detail: "체크인 10/20 기준 'D ≥ 7 → 10/13 이전 취소' 로 적었으나, D=7 인 10/13 당일도 100% 에 포함되어야 함.",
+    cause: "규칙(D ≥ 7)과 예시 문구(\"이전\")의 경계 불일치. 커밋 전 자체 검토에서 발견.",
+    resolution: "예시를 '~ 10/13' 으로 수정 후 커밋. 경계값은 시나리오 S10 테스트로 고정할 예정.",
+    refs: ["02dc45d", "docs/01-planning.md §5.2"],
+  },
+  {
+    id: "L008", at: "2026-10-09 13:11", task: "T01", type: "error", status: "open",
+    title: "progress.html 자동 갱신 스크립트 실패 — 줄바꿈(CRLF) 불일치",
+    detail: "node 로 여러 줄 문자열을 찾아 바꾸는 스크립트가 `Error: miss: status: \"todo\", branch: \"docs/planning\" ...` 로 실패.",
+    cause: "브랜치 전환 시 git 이 파일을 CRLF 로 체크아웃(L003)해서, LF 기준으로 작성한 여러 줄 검색 문자열이 일치하지 않음. 실패 시 파일은 쓰지 않도록 되어 있어 손상 없음.",
+    resolution: "편집 도구로 직접 수정해 진행. 근본 대책으로 .gitattributes(`* text=auto eol=lf`, Windows 스크립트만 crlf) 추가를 제안 — 사용자 확인 후 반영.",
+    refs: ["ea1232a", "docs/progress.html"],
+  },
+  {
+    id: "L009", at: "2026-10-09 13:20", task: "T01a", type: "change", status: "resolved",
+    title: "작업 로그(오류·변경 기록) HTML 추가 요구",
+    detail: "작업 중 생긴 오류와 변경사항을 볼 수 있는 페이지 요청. T01 이 리뷰 대기 중이라 기획 브랜치와 섞지 않기 위해 별도 브랜치(docs/worklog)에서 진행.",
+    resolution: "docs/worklog.html 추가, AGENT.md 13장에 기록 규칙 추가.",
+    refs: ["docs/worklog.html", "AGENT.md §13"],
+  },
+];
+</script>
+
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --text: #1b1f24; --muted: #5d6673; --line: #e2e6eb; --chip-bg: #eef1f4;
+    --accent: #0f6e63;
+    --error: #b91c1c; --change: #7c3aed; --decision: #2563eb; --fix: #0f766e;
+    --resolved: #15803d; --open: #b91c1c; --watch: #b45309;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --surface: #171b21; --text: #e6e9ee; --muted: #9aa4b2; --line: #2a3039; --chip-bg: #222831;
+      --accent: #3fb8a8;
+      --error: #f87171; --change: #a78bfa; --decision: #60a5fa; --fix: #2dd4bf;
+      --resolved: #4ade80; --open: #f87171; --watch: #f59e0b;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --surface: #171b21; --text: #e6e9ee; --muted: #9aa4b2; --line: #2a3039; --chip-bg: #222831;
+    --accent: #3fb8a8;
+    --error: #f87171; --change: #a78bfa; --decision: #60a5fa; --fix: #2dd4bf;
+    --resolved: #4ade80; --open: #f87171; --watch: #f59e0b;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 20px; }
+  h1 { font-size: 1.5rem; margin: 0; }
+  h1 small { color: var(--muted); font-weight: 500; font-size: 0.9rem; margin-left: 6px; }
+  a { color: var(--accent); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 20px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .stat .v { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .k { color: var(--muted); font-size: 0.8rem; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .filters select, .filters input {
+    font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px; min-height: 34px;
+  }
+  .filters input { flex: 1 1 200px; }
+  .count { color: var(--muted); font-size: 0.85rem; }
+
+  .entry { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+  .entry.t-error { border-left-color: var(--error); } .entry.t-change { border-left-color: var(--change); }
+  .entry.t-decision { border-left-color: var(--decision); } .entry.t-fix { border-left-color: var(--fix); }
+  .entry .top { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 0.8rem; color: var(--muted); }
+  .entry .id { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  .entry h3 { margin: 6px 0 8px; font-size: 1rem; }
+  dl { margin: 0; display: grid; grid-template-columns: 64px 1fr; gap: 4px 12px; }
+  dt { color: var(--muted); font-size: 0.8rem; padding-top: 2px; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 99px; background: var(--chip-bg); font-size: 0.75rem; font-weight: 600; }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .c-error { color: var(--error); } .c-change { color: var(--change); } .c-decision { color: var(--decision); } .c-fix { color: var(--fix); }
+  .c-resolved { color: var(--resolved); } .c-open { color: var(--open); } .c-watch { color: var(--watch); }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; background: var(--chip-bg); padding: 1px 5px; border-radius: 4px; }
+  .refs code { margin-right: 4px; }
+  .empty { color: var(--muted); text-align: center; padding: 32px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>STAYPOINT <small>작업 로그 · 오류와 변경 기록</small></h1>
+    <a href="progress.html">진행 현황 보기 →</a>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filters">
+    <select id="f-type" aria-label="유형">
+      <option value="">모든 유형</option>
+      <option value="error">오류</option><option value="change">변경</option>
+      <option value="decision">결정</option><option value="fix">수정</option>
+    </select>
+    <select id="f-status" aria-label="상태">
+      <option value="">모든 상태</option>
+      <option value="open">미해결</option><option value="watch">관찰 중</option><option value="resolved">해결</option>
+    </select>
+    <select id="f-task" aria-label="Task"></select>
+    <input id="f-q" type="search" placeholder="검색 (제목·내용·원인·조치)">
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // `code` 표기를 <code> 로
+  const fmt = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+  const TYPE = { error: "오류", change: "변경", decision: "결정", fix: "수정" };
+  const STATUS = { resolved: "해결", open: "미해결", watch: "관찰 중" };
+
+  const count = (pred) => LOG.filter(pred).length;
+  $("stats").innerHTML = [
+    ["전체", LOG.length],
+    ["오류", count((e) => e.type === "error")],
+    ["변경 · 결정", count((e) => e.type === "change" || e.type === "decision")],
+    ["미해결", count((e) => e.status === "open")],
+    ["관찰 중", count((e) => e.status === "watch")],
+  ].map(([k, v]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
+
+  const tasks = [...new Set(LOG.map((e) => e.task))];
+  $("f-task").innerHTML = `<option value="">모든 Task</option>` + tasks.map((t) => `<option>${esc(t)}</option>`).join("");
+
+  function render() {
+    const type = $("f-type").value, status = $("f-status").value, task = $("f-task").value;
+    const q = $("f-q").value.trim().toLowerCase();
+    const rows = LOG.filter((e) =>
+      (!type || e.type === type) && (!status || e.status === status) && (!task || e.task === task) &&
+      (!q || [e.title, e.detail, e.cause, e.resolution, ...(e.refs || [])].join(" ").toLowerCase().includes(q))
+    ).slice().reverse(); // 최신순
+
+    $("count").textContent = `${rows.length} / ${LOG.length}건`;
+    $("list").innerHTML = rows.length ? rows.map((e) => `
+      <article class="entry t-${esc(e.type)}">
+        <div class="top">
+          <span class="id">${esc(e.id)}</span><span>${esc(e.at)}</span><span>${esc(e.task)}</span>
+          <span class="chip c-${esc(e.type)}">${esc(TYPE[e.type] || e.type)}</span>
+          <span class="chip c-${esc(e.status)}">${esc(STATUS[e.status] || e.status)}</span>
+        </div>
+        <h3>${fmt(e.title)}</h3>
+        <dl>
+          ${e.detail ? `<dt>내용</dt><dd>${fmt(e.detail)}</dd>` : ""}
+          ${e.cause ? `<dt>원인</dt><dd>${fmt(e.cause)}</dd>` : ""}
+          ${e.resolution ? `<dt>조치</dt><dd>${fmt(e.resolution)}</dd>` : ""}
+          ${e.refs?.length ? `<dt>참조</dt><dd class="refs">${e.refs.map((r) => `<code>${esc(r)}</code>`).join("")}</dd>` : ""}
+        </dl>
+      </article>`).join("") : `<div class="empty">조건에 맞는 기록이 없습니다.</div>`;
+  }
+
+  ["f-type", "f-status", "f-task"].forEach((id) => $(id).addEventListener("change", render));
+  $("f-q").addEventListener("input", render);
+  render();
+})();
+</script>
+</body>
+</html>
