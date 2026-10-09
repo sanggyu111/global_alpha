@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T11",
+  currentTask: "T12",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -94,9 +94,9 @@ const PROGRESS = {
     },
     {
       id: "T11", phase: "dev", title: "프론트 기반 · 검색 → 예약 → 결제 화면",
-      status: "review", branch: "feat/T11-frontend-booking",
+      status: "done", branch: "feat/T11-frontend-booking",
       checks: { error: true, spec: true }, commits: ["e7d25ad", "d6f6e91", "ae66b73", "bf25980"],
-      note: "npm run lint · build 통과. 실제 브라우저(Chrome)로 S1 수행: 검색 → 예약(폼 이중 제출 → 예약 1건) → 결제 확정, 거절 → 새 키로 재결제 확정, 지연 5초 → 처리 중 → 확정. Next 15.5.27. 내 예약 화면은 T12.",
+      note: "npm run lint · build 통과. 실제 브라우저(Chrome)로 S1 수행: 검색 → 예약(폼 이중 제출 → 예약 1건) → 결제 확정, 거절 → 새 키로 재결제 확정, 지연 5초 → 처리 중 → 확정. Next 15.5.27. 내 예약 화면은 T12. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T12", phase: "dev", title: "프론트 내 예약 · 취소",
