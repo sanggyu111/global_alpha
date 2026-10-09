@@ -20,13 +20,14 @@ import jakarta.persistence.Table;
 
 /**
  * 예약. 상태는 도메인 메서드로만 바꾼다 (AGENT.md 5장).
- * 상태를 바꾸는 호출자는 먼저 예약 행을 잠가야 한다 (설계 4.3). 사용자 취소 전이는 T08 에서 추가한다.
+ * 상태를 바꾸는 호출자는 먼저 예약 행을 잠가야 한다 (설계 4.3).
  */
 @Entity
 @Table(name = "reservation")
 public class Reservation {
 
 	public static final String CANCEL_REASON_HOLD_EXPIRED = "HOLD_EXPIRED";
+	public static final String CANCEL_REASON_USER = "USER_CANCEL";
 
 	/** 결제를 시작하려면 선점이 최소 이만큼 남아 있어야 한다 (설계 4.7). */
 	public static final Duration PAYMENT_MIN_REMAINING = Duration.ofSeconds(30);
@@ -149,6 +150,20 @@ public class Reservation {
 		}
 	}
 
+	/**
+	 * 사용자 취소: PENDING · CONFIRMED → CANCELED. 환불 금액은 호출한 쪽이 환불 정책으로 계산해 넘긴다.
+	 * 재고 복원·PG 취소 요청은 호출한 쪽이 같은 트랜잭션에서 한다.
+	 *
+	 * @return 전이 전 상태 (이력 기록용)
+	 */
+	public ReservationStatus cancelByUser(BigDecimal refundAmount, Instant now) {
+		ReservationStatus from = transitionTo(ReservationStatus.CANCELED, now);
+		this.canceledAt = now;
+		this.cancelReason = CANCEL_REASON_USER;
+		this.refundAmount = refundAmount;
+		return from;
+	}
+
 	/** 결제 승인을 반영해 확정할 수 있는가: PENDING 이고 선점 만료 전 (스케줄러가 아직 안 돌았어도 시각 기준). */
 	public boolean isConfirmable(Instant now) {
 		return status == ReservationStatus.PENDING && now.isBefore(holdExpiresAt);
@@ -239,6 +254,10 @@ public class Reservation {
 
 	public String getCancelReason() {
 		return cancelReason;
+	}
+
+	public BigDecimal getRefundAmount() {
+		return refundAmount;
 	}
 
 	public String getIdempotencyKey() {
