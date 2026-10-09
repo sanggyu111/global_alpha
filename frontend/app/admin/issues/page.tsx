@@ -1,4 +1,4 @@
-import { recountInventory } from "@/app/actions";
+import { recountInventory, retryPaymentCancel } from "@/app/actions";
 import { api } from "@/lib/api";
 import { dateTime, won } from "@/lib/format";
 import type { InventoryMismatch, PaymentCancelIssue } from "@/lib/types";
@@ -33,6 +33,7 @@ export default async function AdminIssuesPage() {
               <th>시도</th>
               <th>마지막 오류</th>
               <th>PG</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -49,6 +50,13 @@ export default async function AdminIssuesPage() {
                 <td className="muted">
                   {c.pgOrderId}
                   <div>{c.pgTid}</div>
+                </td>
+                <td>
+                  {/* 실패하면 다시 이 목록에 남는다 (자동 재시도는 다시 시작되지 않음) */}
+                  <form action={retryPaymentCancel}>
+                    <input type="hidden" name="cancelId" value={c.id} />
+                    <button type="submit">수동 재시도</button>
+                  </form>
                 </td>
               </tr>
             ))}

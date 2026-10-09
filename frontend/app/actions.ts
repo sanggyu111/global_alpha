@@ -134,6 +134,12 @@ export async function recountInventory(formData: FormData) {
   revalidatePath("/admin/issues");
 }
 
+/** 운영자 수동 재시도: PG 쪽 원인을 확인한 뒤 자동 환불 실패 건을 한 번 더 시도한다. */
+export async function retryPaymentCancel(formData: FormData) {
+  await api(`/api/admin/payment-cancels/${formData.get("cancelId")}/retry`, { method: "POST" });
+  revalidatePath("/admin/issues");
+}
+
 function messageOf(error: ApiError): string {
   const fieldMessages = error.details
     ? Object.values(error.details).flatMap((v) => (typeof v === "string" ? [v] : Array.isArray(v) ? [v.join(", ")] : []))
