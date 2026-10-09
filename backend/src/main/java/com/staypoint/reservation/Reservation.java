@@ -20,7 +20,7 @@ import jakarta.persistence.Table;
 
 /**
  * 예약. 상태는 도메인 메서드로만 바꾼다 (AGENT.md 5장).
- * 상태를 바꾸는 호출자는 먼저 예약 행을 잠가야 한다 (설계 4.3). 확정·취소 전이는 T07·T08 에서 추가한다.
+ * 상태를 바꾸는 호출자는 먼저 예약 행을 잠가야 한다 (설계 4.3). 사용자 취소 전이는 T08 에서 추가한다.
  */
 @Entity
 @Table(name = "reservation")
@@ -149,6 +149,26 @@ public class Reservation {
 		}
 	}
 
+	/** 결제 승인을 반영해 확정할 수 있는가: PENDING 이고 선점 만료 전 (스케줄러가 아직 안 돌았어도 시각 기준). */
+	public boolean isConfirmable(Instant now) {
+		return status == ReservationStatus.PENDING && now.isBefore(holdExpiresAt);
+	}
+
+	/**
+	 * 결제 승인으로 확정: PENDING → CONFIRMED. 만료 시각이 지났으면 확정하지 않는다 (FR-PAY-8).
+	 *
+	 * @return 전이 전 상태 (이력 기록용)
+	 */
+	public ReservationStatus confirm(Instant now) {
+		if (status == ReservationStatus.PENDING && !now.isBefore(holdExpiresAt)) {
+			throw new BusinessException(ErrorCode.HOLD_EXPIRED, ErrorCode.HOLD_EXPIRED.defaultMessage(),
+					Map.of("holdExpiresAt", holdExpiresAt.toString()));
+		}
+		ReservationStatus from = transitionTo(ReservationStatus.CONFIRMED, now);
+		this.confirmedAt = now;
+		return from;
+	}
+
 	/** 모든 상태 변경은 여기를 거친다. 허용되지 않은 전이는 예외. */
 	private ReservationStatus transitionTo(ReservationStatus to, Instant now) {
 		if (!status.canTransitionTo(to)) {
@@ -207,6 +227,10 @@ public class Reservation {
 
 	public Instant getHoldExpiresAt() {
 		return holdExpiresAt;
+	}
+
+	public Instant getConfirmedAt() {
+		return confirmedAt;
 	}
 
 	public Instant getCanceledAt() {

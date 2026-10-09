@@ -4,12 +4,20 @@ import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
 	Optional<Reservation> findByUserIdAndIdempotencyKey(String userId, String idempotencyKey);
+
+	/** 상태를 바꾸기 전에 예약 행을 잠근다 (SELECT … FOR UPDATE). 잠금 순서: reservation → payment → room_inventory. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT r FROM Reservation r WHERE r.id = :id")
+	Optional<Reservation> findByIdForUpdate(@Param("id") Long id);
 
 	/**
 	 * 선점이 만료된 PENDING 예약 하나를 잠가서 가져온다 (설계 4.7).

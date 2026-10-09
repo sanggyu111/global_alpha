@@ -7,11 +7,12 @@ import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+
+import com.staypoint.common.SelfUrl;
 
 import jakarta.annotation.PreDestroy;
 
@@ -26,13 +27,13 @@ class MockPgWebhookSender {
 	private static final Logger log = LoggerFactory.getLogger(MockPgWebhookSender.class);
 
 	private final MockPgProperties properties;
-	private final Environment environment;
+	private final SelfUrl selfUrl;
 	private final RestClient restClient;
 	private final ExecutorService executor = Executors.newFixedThreadPool(4);
 
-	MockPgWebhookSender(MockPgProperties properties, Environment environment) {
+	MockPgWebhookSender(MockPgProperties properties, SelfUrl selfUrl) {
 		this.properties = properties;
-		this.environment = environment;
+		this.selfUrl = selfUrl;
 		SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
 		requestFactory.setConnectTimeout(Duration.ofSeconds(1));
 		requestFactory.setReadTimeout(Duration.ofSeconds(5));
@@ -49,7 +50,8 @@ class MockPgWebhookSender {
 			log.warn("mockpg.webhook.secret(MOCKPG_WEBHOOK_SECRET) 이 비어 있어 웹훅을 보내지 않습니다.");
 			return;
 		}
-		String url = resolveUrl(webhook.url());
+		// 기본 통지 주소는 같은 앱 자신 ("/api/payments/webhook")
+		String url = selfUrl.resolve(webhook.url()).orElse(null);
 		if (url == null) {
 			log.warn("웹 서버 포트를 알 수 없어 웹훅을 보내지 않습니다: {}", webhook.url());
 			return;
@@ -75,18 +77,6 @@ class MockPgWebhookSender {
 		} catch (RuntimeException e) {
 			log.warn("웹훅 전송 실패: orderId={}, url={}, {}", body.get("orderId"), url, e.getMessage());
 		}
-	}
-
-	/**
-	 * 모의 PG 는 같은 앱 안에 있으므로 기본 통지 주소는 "자기 자신" 이다. 실제 포트는 서버가 뜬 뒤에야 정해지므로
-	 * (테스트는 랜덤 포트) 시작 시점에 고정하지 않고 보낼 때마다 local.server.port 로 만든다.
-	 */
-	private String resolveUrl(String url) {
-		if (!url.startsWith("/")) {
-			return url;
-		}
-		String port = environment.getProperty("local.server.port");
-		return port == null ? null : "http://localhost:" + port + url;
 	}
 
 	@PreDestroy

@@ -312,6 +312,30 @@ const LOG = [
     resolution: "해당 예외별 핸들러 추가: 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED(코드 추가), 400 VALIDATION_FAILED. GlobalExceptionHandlerTest 3건 추가, 실제 앱에서 404/405/400 확인.",
     refs: [],
   },
+  {
+    id: "L031",
+    at: "2026-10-09 17:30",
+    task: "T07",
+    type: "decision",
+    status: "resolved",
+    title: "결제 트랜잭션 구조: TX1(prepare) → 트랜잭션 밖 PG 호출 → TX2(applyResult), 결과 모름은 PROCESSING",
+    detail: "PaymentService(트랜잭션 없음)가 PaymentProcessor.prepare(예약 잠금·검증·READY INSERT) 커밋 → PgClient.approve(HTTP, 읽기 타임아웃 3초) → PaymentProcessor.applyResult 순서로 조립. applyResult 는 동기 응답·웹훅·상태 확정 스케줄러가 공유하는 단일 반영 경로이고, 결제가 READY 가 아니면 아무것도 하지 않아 중복 통지를 무시. 확정 불가(예약이 PENDING 아님·만료 시각 경과·금액 불일치)면 같은 트랜잭션에서 payment_cancel(COMPENSATION) INSERT → 커밋 후 PG 취소 1회 시도.",
+    cause: "타임아웃·5xx 는 '실패' 가 아니라 '결과 모름' (PG 에선 승인됐을 수 있음) → FAILED 로 단정하면 돈만 빠져나가는 경로가 생김. 같은 결제 키 재요청은 새 결제를 만들지 않고 같은 orderId 로 PG 를 다시 불러 PG 의 처음 결과를 받음.",
+    resolution: "결과 모름 → READY 유지 + PROCESSING 응답. 웹훅 또는 상태 확정 스케줄러(READY 1분 경과 → PG 조회, 기록 없으면 FAILED)가 확정. 보상 취소 실패 시 5xx·타임아웃은 백오프 재시도 예약(1·2·4·8분, 실제 스케줄러는 T14), PG 4xx 거절은 즉시 MANUAL_REVIEW. 알려진 한계: PG 조회 시 기록이 없어 FAILED 로 확정한 뒤 승인 요청이 늦게(1분 이상) PG 에 도착하면 그 승인은 반영되지 않음 → README 에 기록.",
+    refs: ["docs/02-design.md §4.4"],
+  },
+  {
+    id: "L032",
+    at: "2026-10-09 17:30",
+    task: "T07",
+    type: "decision",
+    status: "resolved",
+    title: "잠금 조회 전에 엔티티를 읽지 않는다 (영속성 컨텍스트의 낡은 상태 문제)",
+    detail: "applyResult 에서 orderId 로 결제를 먼저 읽은 뒤 예약·결제를 잠그면, 잠금 조회가 영속성 컨텍스트에 이미 있던(잠그기 전의) 엔티티를 그대로 돌려줌 → 동시에 온 두 통지가 둘 다 READY 로 보고 이중 반영할 수 있음.",
+    cause: "JPA 는 같은 트랜잭션에서 이미 관리 중인 엔티티를 쿼리 결과로 덮어쓰지 않는다.",
+    resolution: "잠그기 전에는 `SELECT p.reservationId` 처럼 값만 조회하고, 예약 → 결제 잠금 조회가 각 엔티티의 첫 조회가 되게 함. S5(같은 통지 동시 3회 → 확정 1회) 테스트로 확인.",
+    refs: [],
+  },
 ];
 </script>
 

@@ -40,6 +40,17 @@ staypoint:
   hold-expiry:
     interval-ms: 30000
     batch-size: 100
+  pg:
+    # "/" 로 시작하면 이 앱 자신의 주소 기준 (같은 앱 안의 모의 PG 를 HTTP 로 호출)
+    base-url: /mock-pg
+    connect-timeout-ms: 1000
+    # 이 시간 안에 승인 응답이 없으면 PROCESSING 으로 응답하고 웹훅·상태 확정 스케줄러에 맡긴다
+    read-timeout-ms: 3000
+    webhook-secret: ${MOCKPG_WEBHOOK_SECRET:}
+  payment-reconcile:
+    interval-ms: 30000
+    ready-threshold-seconds: 60
+    batch-size: 50
   cancel-retry:
     max-attempts: 5
 
