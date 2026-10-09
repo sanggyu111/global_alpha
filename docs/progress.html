@@ -123,8 +123,9 @@ const PROGRESS = {
     },
     {
       id: "T16", phase: "submit", title: "README · 제출 점검",
-      status: "todo", branch: "docs/T16-readme",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "review", branch: "docs/T16-readme",
+      checks: { error: true, spec: null }, commits: ["34e2716", "849cdff"],
+      note: "README 작성: 실행 방법·아키텍처·데이터 모델·8개 질문·정책·타협. 깨끗한 clone 에서 README 순서대로 실행 → S1 브라우저 확인, 백엔드 테스트 159건·프론트 lint·build 통과. 시크릿 이력 점검 이상 없음. 남은 것: Q7·투입 시간(지원자 직접 작성), 배포 섹션(T15 후).",
     },
   ],
 
@@ -140,14 +141,14 @@ const PROGRESS = {
 
   // README 에 답해야 하는 8개 질문 (PDF 2.4)
   questions: [
-    { id: "Q1", name: "기술 선택 이유 (필수)", status: "todo" },
-    { id: "Q2", name: "초과예약 방지 방법과 깨지는 조건", status: "todo" },
-    { id: "Q3", name: "동시성 테스트로 증명 (실행 결과 첨부)", status: "in-progress" },
-    { id: "Q4", name: "트랜잭션 경계와 멱등성", status: "todo" },
-    { id: "Q5", name: "프론트 서버/클라이언트 경계 · 캐싱", status: "in-progress" },
-    { id: "Q6", name: "재고 불일치 감지와 복구", status: "todo" },
-    { id: "Q7", name: "처음 써본 것과 익힌 방법 (필수)", status: "todo" },
-    { id: "Q8", name: "시간이 더 있었다면", status: "todo" },
+    { id: "Q1", name: "기술 선택 이유 (필수)", status: "done" },
+    { id: "Q2", name: "초과예약 방지 방법과 깨지는 조건", status: "done" },
+    { id: "Q3", name: "동시성 테스트로 증명 (실행 결과 첨부)", status: "done" },
+    { id: "Q4", name: "트랜잭션 경계와 멱등성", status: "done" },
+    { id: "Q5", name: "프론트 서버/클라이언트 경계 · 캐싱", status: "done" },
+    { id: "Q6", name: "재고 불일치 감지와 복구", status: "done" },
+    { id: "Q7", name: "처음 써본 것과 익힌 방법 (필수)", status: "in-progress" },
+    { id: "Q8", name: "시간이 더 있었다면", status: "done" },
   ],
 
   // 제출 직전 체크리스트 (PDF 부록 B)
