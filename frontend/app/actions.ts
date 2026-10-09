@@ -96,7 +96,47 @@ export async function cancelReservation(reservationId: number): Promise<CancelRe
   return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
 }
 
+// ---- 관리자 (인증 없음 — 과제 범위 밖) ----
+
+/** 기간 재고 설정. 예약된 수보다 줄이려는 날짜가 있으면 백엔드가 전체를 거부하고 그 날짜들을 알려준다. */
+export async function setInventory(_prev: FormState, formData: FormData): Promise<FormState> {
+  const roomTypeId = String(formData.get("roomTypeId"));
+  const result = await api(`/api/admin/room-types/${roomTypeId}/inventory`, {
+    method: "PUT",
+    body: {
+      from: formData.get("from"),
+      to: formData.get("to"),
+      totalCount: Number(formData.get("totalCount")),
+    },
+  });
+  if (!result.ok) return { error: messageOf(result.error) };
+  revalidatePath("/admin/inventory");
+  return { error: null };
+}
+
+/** 기간 요금 설정. 이미 만든 예약의 금액은 바뀌지 않는다. */
+export async function setRates(_prev: FormState, formData: FormData): Promise<FormState> {
+  const roomTypeId = String(formData.get("roomTypeId"));
+  const result = await api(`/api/admin/room-types/${roomTypeId}/rates`, {
+    method: "PUT",
+    body: { from: formData.get("from"), to: formData.get("to"), price: Number(formData.get("price")) },
+  });
+  if (!result.ok) return { error: messageOf(result.error) };
+  revalidatePath("/admin/inventory");
+  return { error: null };
+}
+
+/** 재고 재계산: 해당 날짜 booked_count 를 예약 테이블 기준 값으로 맞춘다 (운영자가 원인 확인 후 실행). */
+export async function recountInventory(formData: FormData) {
+  await api(`/api/admin/room-types/${formData.get("roomTypeId")}/inventory/${formData.get("stayDate")}/recount`, {
+    method: "POST",
+  });
+  revalidatePath("/admin/issues");
+}
+
 function messageOf(error: ApiError): string {
-  const fieldMessages = error.details ? Object.values(error.details).filter((v) => typeof v === "string") : [];
+  const fieldMessages = error.details
+    ? Object.values(error.details).flatMap((v) => (typeof v === "string" ? [v] : Array.isArray(v) ? [v.join(", ")] : []))
+    : [];
   return fieldMessages.length > 0 ? `${error.message} (${fieldMessages.join(", ")})` : error.message;
 }
