@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T03",
+  currentTask: "T05",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -46,14 +46,15 @@ const PROGRESS = {
     },
     {
       id: "T03", phase: "dev", title: "백엔드 기반 — Spring Boot · compose · Flyway V1 · 시드 · Testcontainers",
-      status: "review", branch: "feat/T03-backend-base",
+      status: "done", branch: "feat/T03-backend-base",
       checks: { error: true, spec: true }, commits: ["11ff533", "34d4b0c", "4b8eba9", "af3b941", "5a49cb2", "f08d0d3"],
-      note: "./gradlew build 통과 (테스트 16건, Testcontainers 포함). compose 빈 DB 에 V1 + 시드 적용, /actuator/health UP. Boot 4.1.1 (L021). Docker 는 WSL 설치 후 동작 (L023).",
+      note: "./gradlew build 통과 (테스트 16건, Testcontainers 포함). compose 빈 DB 에 V1 + 시드 적용, /actuator/health UP. Boot 4.1.1 (L021). Docker 는 WSL 설치 후 동작 (L023). 사용자 리뷰 승인, main 병합 (4609913).",
     },
     {
       id: "T04", phase: "dev", title: "예약 생성 · 재고 선점 + 동시 예약 테스트",
-      status: "todo", branch: "feat/T04-reservation-hold",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "done", branch: "feat/T04-reservation-hold",
+      checks: { error: true, spec: true }, commits: ["319e46f", "5150996", "3c00f98", "a58939f", "1bdd897"],
+      note: "build 통과 (테스트 31건). 동시 예약 재고 3·요청 50 → 성공 3·SOLD_OUT 47·booked 3 (4회 반복 동일). S3 부분 매진 롤백, 같은 키 동시 2회 → 1건. 실제 앱 HTTP 확인 (201 → 200 재요청 → 마지막 1실 409). 선점 만료는 T05. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T05", phase: "dev", title: "선점 만료 스케줄러",
@@ -119,7 +120,7 @@ const PROGRESS = {
 
   // 과제 필수 요구사항 (PDF 2.3) — 우선순위 순
   requirements: [
-    { id: "R2", name: "예약 생성 · 재고 선점 (초과예약 방지)", status: "todo" },
+    { id: "R2", name: "예약 생성 · 재고 선점 (초과예약 방지)", status: "in-progress" },
     { id: "R3", name: "결제 · 모의 PG · 중복 콜백 멱등 · 보상 처리", status: "todo" },
     { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "todo" },
     { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "todo" },
@@ -131,7 +132,7 @@ const PROGRESS = {
   questions: [
     { id: "Q1", name: "기술 선택 이유 (필수)", status: "todo" },
     { id: "Q2", name: "초과예약 방지 방법과 깨지는 조건", status: "todo" },
-    { id: "Q3", name: "동시성 테스트로 증명 (실행 결과 첨부)", status: "todo" },
+    { id: "Q3", name: "동시성 테스트로 증명 (실행 결과 첨부)", status: "in-progress" },
     { id: "Q4", name: "트랜잭션 경계와 멱등성", status: "todo" },
     { id: "Q5", name: "프론트 서버/클라이언트 경계 · 캐싱", status: "todo" },
     { id: "Q6", name: "재고 불일치 감지와 복구", status: "todo" },

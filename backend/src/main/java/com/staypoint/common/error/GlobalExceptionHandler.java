@@ -6,6 +6,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -30,6 +31,12 @@ public class GlobalExceptionHandler {
 		e.getBindingResult().getFieldErrors()
 				.forEach(error -> fieldErrors.put(error.getField(), error.getDefaultMessage()));
 		return respond(ErrorCode.VALIDATION_FAILED, ErrorCode.VALIDATION_FAILED.defaultMessage(), fieldErrors);
+	}
+
+	// JSON 형식 오류, 날짜 형식(yyyy-MM-dd) 오류 등 본문을 읽을 수 없는 요청
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException e) {
+		return respond(ErrorCode.VALIDATION_FAILED, "요청 본문을 읽을 수 없습니다.", Map.of());
 	}
 
 	@ExceptionHandler(MissingRequestHeaderException.class)
