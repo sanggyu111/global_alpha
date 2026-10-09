@@ -18,6 +18,9 @@ public enum ErrorCode {
 	INVALID_STATE(HttpStatus.CONFLICT, "현재 상태에서는 처리할 수 없습니다."),
 	PAYMENT_IN_PROGRESS(HttpStatus.CONFLICT, "이미 진행 중인 결제가 있습니다."),
 	INVENTORY_BELOW_BOOKED(HttpStatus.CONFLICT, "이미 예약된 수보다 재고를 줄일 수 없습니다."),
+	// 모의 PG 응답용
+	CANCEL_AMOUNT_EXCEEDED(HttpStatus.CONFLICT, "취소 금액이 남은 승인 금액보다 큽니다."),
+	PG_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "결제 대행사가 일시적으로 응답할 수 없습니다."),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 
 	private final HttpStatus status;
