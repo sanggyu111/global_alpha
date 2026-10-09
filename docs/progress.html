@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T09",
+  currentTask: "T10",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -82,9 +82,9 @@ const PROGRESS = {
     },
     {
       id: "T09", phase: "dev", title: "조회 API — 숙소 · 가용 객실 검색",
-      status: "review", branch: "feat/T09-search-api",
+      status: "done", branch: "feat/T09-search-api",
       checks: { error: true, spec: true }, commits: ["9b6a1e0", "e911c79", "2b8186a", "ae63134", "b2408cc"],
-      note: "build 통과 (테스트 135건). 가용 검색: 다박 부분 매진·정원 초과·요금/재고 누락 제외, 체크아웃 날짜 미포함, 잔여 = 기간 최소, 총액 = 날짜별 합. 내 예약 목록·상세(환불 예정액) 범위 추가 (L035). 시드 데이터로 주말 요금 확인.",
+      note: "build 통과 (테스트 135건). 가용 검색: 다박 부분 매진·정원 초과·요금/재고 누락 제외, 체크아웃 날짜 미포함, 잔여 = 기간 최소, 총액 = 날짜별 합. 내 예약 목록·상세(환불 예정액) 범위 추가 (L035). 시드 데이터로 주말 요금 확인. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T10", phase: "dev", title: "관리자 API — 예약 목록 · 재고/요금 · 확인 대상",
