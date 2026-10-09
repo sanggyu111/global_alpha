@@ -27,4 +27,23 @@ public interface RoomInventoryRepository extends JpaRepository<RoomInventory, Lo
 	int holdOneRoomPerNight(@Param("roomTypeId") Long roomTypeId,
 			@Param("checkIn") LocalDate checkIn,
 			@Param("checkOut") LocalDate checkOut);
+
+	/**
+	 * 숙박 기간의 모든 날짜 재고를 1실씩 복원한다 (선점 만료 · 취소).
+	 * booked_count > 0 조건: 이미 어긋난 데이터(0 인 날짜)가 있어도 CHECK 위반으로 만료·취소 전체가
+	 * 막히지 않게 한다. 복원된 날짜 수가 모자라면 호출한 쪽이 불일치로 기록한다.
+	 *
+	 * @return 복원된 날짜 수
+	 */
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query(value = """
+			UPDATE room_inventory
+			   SET booked_count = booked_count - 1, updated_at = now()
+			 WHERE room_type_id = :roomTypeId
+			   AND stay_date >= :checkIn AND stay_date < :checkOut
+			   AND booked_count > 0
+			""", nativeQuery = true)
+	int releaseOneRoomPerNight(@Param("roomTypeId") Long roomTypeId,
+			@Param("checkIn") LocalDate checkIn,
+			@Param("checkOut") LocalDate checkOut);
 }

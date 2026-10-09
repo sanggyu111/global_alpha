@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T05",
+  currentTask: "T06",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -58,8 +58,9 @@ const PROGRESS = {
     },
     {
       id: "T05", phase: "dev", title: "선점 만료 스케줄러",
-      status: "todo", branch: "feat/T05-hold-expiry",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "done", branch: "feat/T05-hold-expiry",
+      checks: { error: true, spec: true }, commits: ["ead210f", "04acc3b", "f9bfeaa", "06a38d8", "70738fe"],
+      note: "build 통과 (테스트 53건). 만료 → CANCELED(HOLD_EXPIRED) + 전 날짜 재고 복원, 스케줄러 3개 동시 실행 시 5건 각 1회 처리(SKIP LOCKED). 실제 앱에서 30초 주기 만료 확인. S4 API 테스트는 T07 로 이동 (L027). 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T06", phase: "dev", title: "모의 PG — 승인 · 조회 · 취소 · 장애 주입 · 웹훅",

@@ -34,6 +34,12 @@ management:
 staypoint:
   zone-id: Asia/Seoul
   hold-minutes: 10
+  # @Scheduled 작업 전체 on/off (테스트에서는 끈다)
+  scheduling:
+    enabled: true
+  hold-expiry:
+    interval-ms: 30000
+    batch-size: 100
   cancel-retry:
     max-attempts: 5
 
