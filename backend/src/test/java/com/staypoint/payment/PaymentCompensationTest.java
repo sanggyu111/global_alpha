@@ -16,12 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.staypoint.reservation.HoldExpiryService;
+import com.staypoint.support.ApiIntegrationTest;
 import com.staypoint.support.HttpTestClient.Response;
 
 /**
  * 중복 승인 통지(S5)와 "승인됐는데 확정 실패" 보상 처리(S7, FR-PAY-5·7·8·9).
  */
-class PaymentCompensationTest extends PaymentTestSupport {
+class PaymentCompensationTest extends ApiIntegrationTest {
 
 	@Autowired
 	PaymentProcessor processor;
