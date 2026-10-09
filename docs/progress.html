@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T11",
+  currentTask: "T12",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -94,8 +94,9 @@ const PROGRESS = {
     },
     {
       id: "T11", phase: "dev", title: "프론트 기반 · 검색 → 예약 → 결제 화면",
-      status: "todo", branch: "feat/T11-frontend-booking",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "done", branch: "feat/T11-frontend-booking",
+      checks: { error: true, spec: true }, commits: ["e7d25ad", "d6f6e91", "ae66b73", "bf25980"],
+      note: "npm run lint · build 통과. 실제 브라우저(Chrome)로 S1 수행: 검색 → 예약(폼 이중 제출 → 예약 1건) → 결제 확정, 거절 → 새 키로 재결제 확정, 지연 5초 → 처리 중 → 확정. Next 15.5.27. 내 예약 화면은 T12. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T12", phase: "dev", title: "프론트 내 예약 · 취소",
@@ -140,7 +141,7 @@ const PROGRESS = {
     { id: "Q2", name: "초과예약 방지 방법과 깨지는 조건", status: "todo" },
     { id: "Q3", name: "동시성 테스트로 증명 (실행 결과 첨부)", status: "in-progress" },
     { id: "Q4", name: "트랜잭션 경계와 멱등성", status: "todo" },
-    { id: "Q5", name: "프론트 서버/클라이언트 경계 · 캐싱", status: "todo" },
+    { id: "Q5", name: "프론트 서버/클라이언트 경계 · 캐싱", status: "in-progress" },
     { id: "Q6", name: "재고 불일치 감지와 복구", status: "todo" },
     { id: "Q7", name: "처음 써본 것과 익힌 방법 (필수)", status: "todo" },
     { id: "Q8", name: "시간이 더 있었다면", status: "todo" },

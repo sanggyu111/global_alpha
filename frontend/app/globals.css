@@ -1,0 +1,115 @@
+/* UI 완성도는 평가 대상이 아니라 기본 HTML 에 최소한의 정리만 한다. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  color: #1b1f24;
+  background: #f6f7f9;
+  line-height: 1.5;
+}
+
+a {
+  color: #0f6e63;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e2e6eb;
+}
+
+.header nav {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+
+.logo {
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.user-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2e6eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e2e6eb;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+form.inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+label {
+  display: inline-flex;
+  flex-direction: column;
+  font-size: 14px;
+  gap: 2px;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 6px 8px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.success {
+  color: #15803d;
+}
+
+.muted {
+  color: #5d6673;
+  font-size: 14px;
+}
