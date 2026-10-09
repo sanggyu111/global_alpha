@@ -36,7 +36,7 @@ ZIVO 채용 사전 과제 — 가상의 호텔 예약 서비스 **STAYPOINT** �
 | 영역 | 고정 | 기본값 (변경 시 README 에 이유 기록) |
 |---|---|---|
 | 프론트엔드 | **Next.js** | Next.js 15, App Router, TypeScript, 서버 컴포넌트 fetch + Server Actions |
-| 백엔드 | **Java + Spring Boot** | Java 17, Spring Boot 3.5.x, Gradle (Groovy), Spring Data JPA + 재고 차감 네이티브 쿼리 |
+| 백엔드 | **Java + Spring Boot** | Java 17, Spring Boot 4.1.1, Gradle 9 (Groovy), Spring Data JPA + 재고 차감 네이티브 쿼리 |
 | DB | **PostgreSQL** | PostgreSQL 15 (ZIVO 운영 버전과 동일), Flyway 마이그레이션, 로컬은 docker compose, 테스트는 Testcontainers |
 | 배포 | — | Railway (백엔드 + PostgreSQL), Vercel (프론트) |
 

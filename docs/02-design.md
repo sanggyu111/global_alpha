@@ -15,14 +15,14 @@
 | 프론트 | **Next.js 15 (App Router) + TypeScript** | 과제 고정. App Router 는 서버/클라이언트 경계를 컴포넌트 단위로 정할 수 있어 Q5 를 설명하기 좋음. 15 는 자료가 가장 많고 `fetch` 기본값이 "캐시 안 함" 이라 실시간 재고에 안전 | Pages Router — 구버전 방식, 신규 학습 가치 낮음 / Next 16 — 캐싱 모델(`use cache`)이 새로 바뀌어 자료가 적음 |
 | 데이터 패칭 | **서버 컴포넌트 `fetch` + Server Actions** (별도 라이브러리 없음) | 조회는 서버에서, 변경은 Server Action 이 서버에서 백엔드 호출 → **CORS 불필요, 백엔드 주소·사용자 헤더가 브라우저에 노출되지 않음** | TanStack Query / SWR — 클라이언트 캐시가 하나 더 생겨 설명할 것이 늘어남. 이 과제엔 불필요 |
 | 스타일 | 기본 CSS (`globals.css`) | UI 는 평가 대상 아님 | Tailwind, 컴포넌트 라이브러리 — 학습 비용 대비 효과 없음 |
-| 백엔드 | **Java 17 + Spring Boot 3.5.x + Gradle (Groovy)** | 과제 고정 + **지원자가 유일하게 써본 기술**. Java 17 은 이미 설치된 LTS 이고 Boot 3 의 최소 버전 | Java 21 — 가상 스레드 등 이점을 이 과제에서 쓰지 않음 / Boot 4 — 출시 초기라 자료 부족 / Kotlin — 학습 부담 |
+| 백엔드 | **Java 17 + Spring Boot 4.1.1 + Gradle 9 (Groovy)** | 과제 고정 + **지원자가 유일하게 써본 기술**. Java 17 은 이미 설치된 LTS 이고 Boot 4 의 최소 버전. Boot 4.1 은 현재 Spring Initializr 기본(최신 안정) 버전 | Java 21 — 가상 스레드 등 이점을 이 과제에서 쓰지 않음 / Boot 3.5 — 오픈소스 지원 종료로 Initializr 에서 제공 안 함 (설계 변경 L021) / Kotlin — 학습 부담 |
 | DB 접근 | **Spring Data JPA + 재고 차감만 네이티브 쿼리** | 일반 CRUD 는 JPA 로 빠르게. 동시성 핵심인 재고 차감은 **SQL 한 줄을 눈으로 보이게** 직접 작성 → 인터뷰에서 설명 가능 | MyBatis — 모든 SQL 직접 작성, 코드량 증가 / JdbcTemplate — 매핑 반복 코드 많음 |
 | DB | **PostgreSQL 15** | 과제 권장(ZIVO 운영 버전). 행 잠금·CHECK·부분 UNIQUE 인덱스·`SKIP LOCKED` 등 이 설계에 필요한 기능 제공 | MySQL — 부분 인덱스 미지원 |
 | 마이그레이션 | **Flyway** (`db/migration/*.sql`) | 순수 SQL 파일이라 DDL 이 그대로 보임. Spring Boot 기본 통합 | Liquibase — XML/YAML 문법 추가 학습 |
 | 테스트 | JUnit 5 + **Testcontainers (PostgreSQL 15)** | 동시성 테스트는 **운영과 같은 DB 엔진**에서 돌려야 의미 있음 (NFR-6) | H2 — 락·제약 동작이 PostgreSQL 과 다름 / embedded-postgres — Docker 를 쓰기로 해서 불필요 |
 | 로컬 실행 | **Docker Desktop + docker compose** | DB 를 명령 한 줄로 띄움, 평가자 재현이 가장 쉬움 | PostgreSQL 직접 설치 — 환경마다 다름 |
 | 배포 | **Railway (백엔드 + PostgreSQL) + Vercel (프론트)** | Railway 는 같은 프로젝트에서 DB 연결 변수를 백엔드에 바로 참조 → 설정이 가장 단순. Vercel 은 Next.js 제작사 | Render + Neon — 무료 유지엔 더 안정적이나 연동 설정이 늘어남 (L014) |
-| API 문서 | springdoc-openapi (Swagger UI) | 과제 권장(OpenAPI 자동 생성), 의존성 1개 | 수동 문서 |
+| API 문서 | springdoc-openapi 3.1 (Swagger UI, Boot 4 대응 버전) | 과제 권장(OpenAPI 자동 생성), 의존성 1개 | 수동 문서 |
 | 헬스 체크 | Spring Boot Actuator `/actuator/health` | 배포 확인·관측성 가산점, 의존성 1개 | — |
 
 **의도적으로 넣지 않는 것**: Lombok(코드가 숨겨져 설명이 어려움 → Java `record` 사용), Redis·메시지 큐(단일 DB 로 충분), 상태관리 라이브러리, 인증 라이브러리.
