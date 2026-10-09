@@ -99,3 +99,58 @@ export type PaymentResponse = {
   amount: number;
   failReason: string | null;
 };
+
+// ---- 관리자 ----
+
+export type Page<T> = { content: T[]; page: number; size: number; totalElements: number; totalPages: number };
+
+export type AdminReservation = {
+  id: number;
+  reservationNo: string;
+  userId: string;
+  status: ReservationStatus;
+  propertyId: number;
+  propertyName: string;
+  roomTypeId: number;
+  roomTypeName: string;
+  checkIn: string;
+  checkOut: string;
+  guestCount: number;
+  guestName: string;
+  totalAmount: number;
+  cancelReason: string | null;
+  createdAt: string;
+};
+
+export type CalendarDay = {
+  date: string;
+  totalCount: number | null;
+  bookedCount: number | null;
+  available: number | null;
+  price: number | null;
+};
+
+export type PaymentCancelIssue = {
+  id: number;
+  reason: "USER_CANCEL" | "COMPENSATION";
+  status: string;
+  cancelAmount: number;
+  attemptCount: number;
+  lastError: string | null;
+  nextRetryAt: string;
+  createdAt: string;
+  updatedAt: string;
+  paymentId: number;
+  pgOrderId: string;
+  pgTid: string | null;
+  reservationId: number;
+  reservationNo: string;
+};
+
+export type InventoryMismatch = {
+  roomTypeId: number;
+  stayDate: string;
+  totalCount: number;
+  bookedCount: number;
+  expectedBookedCount: number;
+};

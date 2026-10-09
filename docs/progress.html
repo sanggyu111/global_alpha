@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T13",
+  currentTask: "T14",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -106,8 +106,9 @@ const PROGRESS = {
     },
     {
       id: "T13", phase: "dev", title: "프론트 관리자 화면",
-      status: "todo", branch: "feat/T13-frontend-admin",
-      checks: { error: null, spec: null }, commits: [], note: "",
+      status: "done", branch: "feat/T13-frontend-admin",
+      checks: { error: true, spec: true }, commits: ["7ff846d", "c40ee94", "76acfe7", "829fde6"],
+      note: "npm run lint · build 통과. 실제 브라우저로 확인: 예약 26건 → 20+6 페이지, 상태·숙소 필터(URL 유지), 재고 0 시도 → 거부 사유(날짜) 표시, 요금 변경 → 달력 반영, MANUAL_REVIEW 목록, 불일치 → 재계산 → 없음. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T14", phase: "dev", title: "결제 취소 재시도 (최대 5회 → MANUAL_REVIEW)",
@@ -132,7 +133,7 @@ const PROGRESS = {
     { id: "R3", name: "결제 · 모의 PG · 중복 콜백 멱등 · 보상 처리", status: "done" },
     { id: "R5", name: "예약 취소 · 환불 금액 계산 · 재고 복원", status: "done" },
     { id: "R1", name: "숙소 / 객실 조회 (가용 재고 · 날짜별 요금)", status: "done" },
-    { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "in-progress" },
+    { id: "R6", name: "조회 화면 (사용자 · 관리자)", status: "done" },
     { id: "R4", name: "결제 취소 재시도 (최대 횟수 · 운영자 분류)", status: "todo" },
   ],
 
