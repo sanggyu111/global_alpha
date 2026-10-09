@@ -52,7 +52,10 @@ staypoint:
     ready-threshold-seconds: 60
     batch-size: 50
   cancel-retry:
+    # 최대 시도 횟수. 넘으면 MANUAL_REVIEW (운영자 확인 대상) — 무한 재시도 금지
     max-attempts: 5
+    interval-ms: 10000
+    batch-size: 10
 
 # 모의 PG 장애 주입 (설계 5장). 승인·취소 API 의 ?failRate=&delayMs= 로 요청마다 덮어쓸 수 있다
 mockpg:

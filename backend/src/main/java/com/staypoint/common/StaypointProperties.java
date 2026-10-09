@@ -34,6 +34,7 @@ public record StaypointProperties(
 	public record PaymentReconcile(long intervalMs, long readyThresholdSeconds, int batchSize) {
 	}
 
-	public record CancelRetry(int maxAttempts) {
+	/** 결제 취소 재시도: 최대 시도 횟수(넘으면 MANUAL_REVIEW), 스케줄러 간격, 한 번에 집는 건수. */
+	public record CancelRetry(int maxAttempts, long intervalMs, int batchSize) {
 	}
 }
