@@ -72,6 +72,30 @@ export async function payReservation(
   return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
 }
 
+export type CancelResponse = {
+  reservationId: number;
+  status: string;
+  refundAmount: number;
+  refundStatus: string;
+};
+
+export type CancelResult = { ok: true; data: CancelResponse } | { ok: false; error: ApiError };
+
+/**
+ * 예약 취소. 이미 취소된 예약을 다시 취소해도 백엔드가 처음 결과를 돌려주므로(멱등) 별도 키가 필요 없다.
+ * 취소되면 재고가 늘어나므로 숙소 화면도 다시 검증한다.
+ */
+export async function cancelReservation(reservationId: number): Promise<CancelResult> {
+  const result = await api<CancelResponse>(`/api/reservations/${reservationId}/cancel`, {
+    method: "POST",
+    userId: await getUserId(),
+  });
+  revalidatePath("/me/reservations");
+  revalidatePath(`/me/reservations/${reservationId}`);
+  revalidatePath("/properties/[id]", "page");
+  return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
+}
+
 function messageOf(error: ApiError): string {
   const fieldMessages = error.details ? Object.values(error.details).filter((v) => typeof v === "string") : [];
   return fieldMessages.length > 0 ? `${error.message} (${fieldMessages.join(", ")})` : error.message;

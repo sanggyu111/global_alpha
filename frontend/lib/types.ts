@@ -46,6 +46,18 @@ export type Reservation = {
   holdExpiresAt: string;
 };
 
+export type ReservationSummary = {
+  id: number;
+  reservationNo: string;
+  status: ReservationStatus;
+  propertyName: string;
+  roomTypeName: string;
+  checkIn: string;
+  checkOut: string;
+  totalAmount: number;
+  createdAt: string;
+};
+
 export type ReservationDetail = {
   id: number;
   reservationNo: string;
