@@ -21,8 +21,11 @@ import com.staypoint.admin.AdminDtos.InventoryMismatch;
 import com.staypoint.admin.AdminDtos.InventoryRequest;
 import com.staypoint.admin.AdminDtos.Page;
 import com.staypoint.admin.AdminDtos.PaymentCancelIssue;
+import com.staypoint.admin.AdminDtos.PaymentCancelRetryResult;
 import com.staypoint.admin.AdminDtos.RateRequest;
 import com.staypoint.admin.AdminDtos.RecountResult;
+import com.staypoint.payment.PaymentCancel;
+import com.staypoint.payment.PaymentCancelRetryService;
 
 import jakarta.validation.Valid;
 
@@ -34,13 +37,15 @@ public class AdminController {
 	private final AdminReservationService reservationService;
 	private final AdminInventoryService inventoryService;
 	private final AdminIssueService issueService;
+	private final PaymentCancelRetryService cancelRetryService;
 	private final Clock clock;
 
 	public AdminController(AdminReservationService reservationService, AdminInventoryService inventoryService,
-			AdminIssueService issueService, Clock clock) {
+			AdminIssueService issueService, PaymentCancelRetryService cancelRetryService, Clock clock) {
 		this.reservationService = reservationService;
 		this.inventoryService = inventoryService;
 		this.issueService = issueService;
+		this.cancelRetryService = cancelRetryService;
 		this.clock = clock;
 	}
 
@@ -77,6 +82,17 @@ public class AdminController {
 	@GetMapping("/payment-cancels")
 	public List<PaymentCancelIssue> paymentCancels(@RequestParam(defaultValue = "MANUAL_REVIEW") String status) {
 		return issueService.paymentCancels(status);
+	}
+
+	/**
+	 * 운영자 수동 재시도: PG 쪽 원인을 확인한 뒤 MANUAL_REVIEW 건을 한 번 더 시도한다.
+	 * 실패하면 다시 MANUAL_REVIEW 로 돌아간다 (자동 재시도는 다시 시작되지 않음).
+	 */
+	@PostMapping("/payment-cancels/{cancelId}/retry")
+	public PaymentCancelRetryResult retryPaymentCancel(@PathVariable Long cancelId) {
+		PaymentCancel cancel = cancelRetryService.retryManually(cancelId);
+		return new PaymentCancelRetryResult(cancel.getId(), cancel.getStatus().name(), cancel.getAttemptCount(),
+				cancel.getLastError());
 	}
 
 	/** 재고 불일치 감지. 기간을 안 주면 오늘부터 1년. */

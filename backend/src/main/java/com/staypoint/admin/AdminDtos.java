@@ -44,6 +44,9 @@ public final class AdminDtos {
 			Long paymentId, String pgOrderId, String pgTid, Long reservationId, String reservationNo) {
 	}
 
+	public record PaymentCancelRetryResult(Long id, String status, int attemptCount, String lastError) {
+	}
+
 	/** expectedBookedCount = 그 날짜를 쓰는 활성 예약(PENDING · CONFIRMED · COMPLETED) 수 = 정답. */
 	public record InventoryMismatch(Long roomTypeId, LocalDate stayDate, int totalCount, int bookedCount,
 			int expectedBookedCount) {
