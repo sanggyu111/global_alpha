@@ -111,7 +111,34 @@ npm run lint && npm run build # 타입 체크 포함
 
 ## 배포
 
-> **TODO(T15)** — 배포 후 채운다: 배포 URL, Railway PostgreSQL 실제 버전, 환경변수 구성, 배포하며 막혔던 지점과 해결.
+> **TODO(T15)** — 배포 후 채운다: 배포 URL, Railway PostgreSQL 실제 버전, 배포하며 막혔던 지점과 해결.
+
+### 구성
+
+```
+Vercel (frontend/) ──BACKEND_URL──▶ Railway 백엔드 서비스 (backend/Dockerfile) ──▶ Railway PostgreSQL
+```
+
+- 백엔드 이미지: [backend/Dockerfile](backend/Dockerfile) — 멀티 스테이지(Gradle 빌드 → JRE 17). **빌드 컨텍스트는 저장소 루트**(`docker build -f backend/Dockerfile .`) — 빌드가 `db/migration`·`db/seed` 를 jar 에 넣기 때문. Railway 설정은 [railway.toml](railway.toml) (Dockerfile 경로, 헬스 체크 `/actuator/health`).
+- 스키마·데모 데이터는 백엔드가 시작할 때 Flyway 가 빈 DB 에 적용한다 (별도 DB 작업 없음).
+- 모의 PG 는 같은 컨테이너 안에서 `http://localhost:${PORT}/mock-pg` 로 호출된다 (포트는 플랫폼이 `PORT` 로 줌).
+
+### 배포 순서 (재현용)
+
+1. **Railway** — New Project → Deploy from GitHub repo → 이 저장소 (`railway.toml` 이 Dockerfile 빌드를 지정)
+2. 같은 프로젝트에 **+ New → Database → PostgreSQL** 추가
+3. 백엔드 서비스 **Variables** (`${{Postgres.…}}` 는 Railway 참조 변수 문법):
+
+   | 변수 | 값 |
+   |---|---|
+   | `DB_URL` | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
+   | `DB_USERNAME` | `${{Postgres.PGUSER}}` |
+   | `DB_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
+   | `SPRING_PROFILES_ACTIVE` | `seed` (데모 데이터) |
+   | `MOCKPG_WEBHOOK_SECRET` | 무작위 문자열 (예: `openssl rand -hex 24`) |
+
+4. 백엔드 서비스 **Settings → Networking → Generate Domain** → `https://….up.railway.app/actuator/health` 가 `UP` 인지 확인
+5. **Vercel** — Add New Project → 이 저장소 → **Root Directory = `frontend`** → Environment Variable `BACKEND_URL` = 4번의 백엔드 주소 (끝에 `/` 없이) → Deploy
 
 | 대상 | 배포처 | 고른 이유 | 버린 대안 |
 |---|---|---|---|
