@@ -15,11 +15,11 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T01",
+  currentTask: "T02",
 
   phases: [
-    { id: "plan",   name: "기획",        status: "in-progress" },
-    { id: "design", name: "설계",        status: "todo" },
+    { id: "plan",   name: "기획",        status: "done" },
+    { id: "design", name: "설계",        status: "in-progress" },
     { id: "dev",    name: "개발 ⇄ 리뷰", status: "todo" },
     { id: "submit", name: "제출 준비",   status: "todo" },
   ],
@@ -34,14 +34,85 @@ const PROGRESS = {
     },
     {
       id: "T01", phase: "plan", title: "기획 — docs/01-planning.md",
-      status: "review", branch: "docs/planning",
-      checks: { error: true, spec: true }, commits: ["02dc45d"],
-      note: "FR 36개(P1~P6) · 비즈니스 정책 · NFR · 시나리오 S1~S11 · 일정. [결정] 항목 사용자 리뷰 필요.",
+      status: "done", branch: "docs/planning",
+      checks: { error: true, spec: true }, commits: ["02dc45d", "ea1232a"],
+      note: "FR 36개(P1~P6) · 비즈니스 정책 · NFR · 시나리오 S1~S11 · 일정. 사용자 리뷰 승인.",
     },
     {
       id: "T02", phase: "design", title: "설계 — docs/02-design.md (ERD · API · 동시성 · Task 목록)",
-      status: "todo", branch: "docs/design",
-      checks: { error: null, spec: null }, commits: [], note: "개발 Task(T03~)는 설계 완료 시 이 목록에 추가",
+      status: "review", branch: "docs/design",
+      checks: { error: true, spec: true }, commits: ["4d0f58b", "a519cbe"],
+      note: "조건부 UPDATE 재고 차감, PG 호출 트랜잭션 밖 + applyResult 멱등, payment_cancel 아웃박스. 사용자 리뷰 대기.",
+    },
+    {
+      id: "T03", phase: "dev", title: "백엔드 기반 — Spring Boot · compose · Flyway V1 · 시드 · Testcontainers",
+      status: "todo", branch: "feat/T03-backend-base",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T04", phase: "dev", title: "예약 생성 · 재고 선점 + 동시 예약 테스트",
+      status: "todo", branch: "feat/T04-reservation-hold",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T05", phase: "dev", title: "선점 만료 스케줄러",
+      status: "todo", branch: "feat/T05-hold-expiry",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T06", phase: "dev", title: "모의 PG — 승인 · 조회 · 취소 · 장애 주입 · 웹훅",
+      status: "todo", branch: "feat/T06-mock-pg",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T07", phase: "dev", title: "결제 · 확정 · 멱등 · 보상 처리",
+      status: "todo", branch: "feat/T07-payment",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T08", phase: "dev", title: "취소 · 환불 + 환불 계산 테스트",
+      status: "todo", branch: "feat/T08-cancel-refund",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T09", phase: "dev", title: "조회 API — 숙소 · 가용 객실 검색",
+      status: "todo", branch: "feat/T09-search-api",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T10", phase: "dev", title: "관리자 API — 예약 목록 · 재고/요금 · 확인 대상",
+      status: "todo", branch: "feat/T10-admin-api",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T11", phase: "dev", title: "프론트 기반 · 검색 → 예약 → 결제 화면",
+      status: "todo", branch: "feat/T11-frontend-booking",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T12", phase: "dev", title: "프론트 내 예약 · 취소",
+      status: "todo", branch: "feat/T12-frontend-my",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T13", phase: "dev", title: "프론트 관리자 화면",
+      status: "todo", branch: "feat/T13-frontend-admin",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T14", phase: "dev", title: "결제 취소 재시도 (최대 5회 → MANUAL_REVIEW)",
+      status: "todo", branch: "feat/T14-cancel-retry",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T15", phase: "submit", title: "배포 — Railway(백엔드+DB) · Vercel(프론트)",
+      status: "todo", branch: "chore/T15-deploy",
+      checks: { error: null, spec: null }, commits: [], note: "",
+    },
+    {
+      id: "T16", phase: "submit", title: "README · 제출 점검",
+      status: "todo", branch: "docs/T16-readme",
+      checks: { error: null, spec: null }, commits: [], note: "",
     },
   ],
 
