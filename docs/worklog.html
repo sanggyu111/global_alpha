@@ -468,6 +468,18 @@ const LOG = [
     resolution: "집은 건을 미뤄 두고, 생성 시에도 next_retry_at = now + 1분. 서버가 처리 중 죽어도 1분 뒤 다시 대상이 됨. 테스트: 동시 스케줄러 3개 → 각 건 attempt 1, S8 타임라인 출력, 실제 앱에서 스케줄러 5회 → MANUAL_REVIEW → 수동 재시도 성공.",
     refs: ["docs/02-design.md §4.6"],
   },
+  {
+    id: "L044",
+    at: "2026-10-09 19:40",
+    task: "T16",
+    type: "change",
+    status: "open",
+    title: "T15(배포)보다 T16(README)을 먼저 진행 — 배포 섹션·Q7·투입 시간은 비워 둠",
+    detail: "사용자 결정으로 README 를 먼저 작성. 배포 URL·막힌 지점(T15 후), Q7 의 익힌 방법·시간과 실제 투입 시간(지원자 본인 경험이라 추측해 쓰지 않음)은 README 에 TODO 로 표시.",
+    cause: "배포는 Railway·Vercel 계정 로그인과 GitHub push 허락이 필요. Q7·투입 시간은 지원자만 아는 사실.",
+    resolution: "README 나머지는 완료: 깨끗한 clone 검증(S1 브라우저, 테스트 159건, 프론트 lint·build), 시크릿 이력 점검(.env 커밋 이력 없음, 실제 비밀값 등장 0회). T15 완료 후 배포 섹션을 채우고 이 항목을 resolved 로.",
+    refs: ["README.md"],
+  },
 ];
 </script>
 
