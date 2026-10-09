@@ -516,6 +516,18 @@ const LOG = [
     resolution: "Raw Editor 로 `${{Postgres.PGHOST}}` 형식으로 다시 입력 → 배포 성공. 배포 URL 에서 헬스 UP, 예약 → 결제 CONFIRMED(1.0초), PG 지연 5초 → 웹훅으로 확정, 취소 100% 환불 SUCCEEDED, 불일치·확인 대상 0 확인. README 배포 순서에 '$ 누락 시 치환 안 됨' 주의 추가.",
     refs: ["README.md 배포"],
   },
+  {
+    id: "L048",
+    at: "2026-10-09 21:20",
+    task: "T15",
+    type: "decision",
+    status: "resolved",
+    title: "운영 DB 가 PostgreSQL 18.6 — 테스트를 18 로도 돌려 호환 확인, 테스트 기본은 15 유지",
+    detail: "Railway 가 새 PostgreSQL 을 18.6 으로 생성 (Flyway 로그 `Database: … (PostgreSQL 18.6)`). 설계·로컬·Testcontainers 는 15 (과제 권장, ZIVO 운영 버전).",
+    cause: "설계 1.2 에서 예상한 리스크 ('Railway 기본 버전이 15 가 아닐 수 있음').",
+    resolution: "Testcontainers 이미지를 임시로 postgres:18-alpine 으로 바꿔 전체 테스트 159건 통과(동시 예약 3/47 동일) 확인 후 15 로 되돌림 (커밋하지 않음). 사용 기능은 15·18 공통. Vercel 배포 후 배포 주소에서 실제 브라우저로 S1·취소 흐름 확인, 확인용 예약은 모두 취소. README 배포 섹션 완성.",
+    refs: ["docs/02-design.md §1.2"],
+  },
 ];
 </script>
 

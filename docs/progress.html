@@ -118,9 +118,9 @@ const PROGRESS = {
     },
     {
       id: "T15", phase: "submit", title: "배포 — Railway(백엔드+DB) · Vercel(프론트)",
-      status: "in-progress", branch: "chore/T15-deploy",
-      checks: { error: null, spec: null }, commits: [],
-      note: "배포 준비 완료: Dockerfile·railway.toml, 로컬 컨테이너로 헬스·결제 확인. gradlew 실행 권한 수정 (L045). 사용자 Railway·Vercel 설정 대기.",
+      status: "review", branch: "chore/T15-deploy",
+      checks: { error: true, spec: true }, commits: ["6124087", "dc226bd", "3b72664", "2cd8011", "96618e2"],
+      note: "배포 완료: 프론트 https://global-alpha-phi.vercel.app, API https://globalalpha-production.up.railway.app (PostgreSQL 18.6). 배포 주소에서 실제 브라우저로 S1·거절 후 재결제·지연·취소 환불 확인. 막힌 지점: 참조 변수 $ 누락 (L047). PG 18 로 테스트 159건 통과 (L048).",
     },
     {
       id: "T16", phase: "submit", title: "README · 제출 점검",
