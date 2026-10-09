@@ -1,0 +1,10 @@
+# 백엔드 이미지 빌드 컨텍스트(저장소 루트)에서 제외 — 업로드 크기 축소, 비밀값 유입 방지
+.git
+.env
+.env.*
+**/node_modules
+frontend
+docs
+backend/build
+backend/.gradle
+**/*.log
