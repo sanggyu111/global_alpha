@@ -2,6 +2,8 @@
 
 ZIVO 채용 사전 과제. 가상의 호텔 예약 서비스 STAYPOINT 의 핵심 흐름 하나를 끝에서 끝까지 구현했다.
 
+**배포**: https://global-alpha-phi.vercel.app (프론트, Vercel) · https://globalalpha-production.up.railway.app (API, Railway — [Swagger](https://globalalpha-production.up.railway.app/swagger-ui.html))
+
 ```
 객실 검색 → 예약 생성(PENDING, 재고 선점 10분) → 모의 PG 결제 → 예약 확정(CONFIRMED) → 취소·환불(CANCELED)
 ```
@@ -111,7 +113,23 @@ npm run lint && npm run build # 타입 체크 포함
 
 ## 배포
 
-> **TODO(T15)** — 배포 후 채운다: 배포 URL, Railway PostgreSQL 실제 버전, 배포하며 막혔던 지점과 해결.
+| | 주소 |
+|---|---|
+| **서비스 (프론트)** | https://global-alpha-phi.vercel.app |
+| 백엔드 API | https://globalalpha-production.up.railway.app — [헬스 체크](https://globalalpha-production.up.railway.app/actuator/health) · [Swagger](https://globalalpha-production.up.railway.app/swagger-ui.html) |
+
+배포 후 확인 (2026-10-09): 배포 주소에서 실제 브라우저로 검색 → 예약(폼 이중 제출 → 1건) → 결제 확정, 거절 후 새 키로 재결제, PG 지연 5초 → 확정, 내 예약 → 취소 → 100% 환불 완료·잔여 재고 복원. 재고 불일치·운영자 확인 대상 0건. 확인용 예약은 모두 취소해 두었다.
+
+### 배포하며 막혔던 지점과 해결
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| Railway 첫 배포 실패, 알림 메일의 링크는 "404 Looks like you are lost" | 저장소를 연결하는 순간 첫 배포가 시작되는데, 그때는 아직 DB 와 환경변수가 없어 앱이 `localhost:5432` 로 접속하다 종료. 메일 링크 404 는 원인과 무관(대시보드에서 직접 확인) | DB 추가·변수 입력 후 재배포. 대시보드의 Deploy Logs 가 실제 원인을 보는 곳 |
+| 변수를 넣었는데도 **CRASHED**, 로그 첫 줄은 `Picked up JAVA_TOOL_OPTIONS` 뿐 | (오판) 메모리 부족으로 의심 → 로컬에서 `docker run --memory=512m` 으로 재현해 보니 약 300MB 로 정상 기동 → 메모리는 원인 아님. 로그를 더 내려 보니 `Driver org.postgresql.Driver claims to not accept jdbcUrl, jdbc:postgresql://{{Postgres.PGHOST}}…` | Railway 참조 변수를 **`$` 없이** `{{Postgres.PGHOST}}` 로 입력해 치환되지 않고 글자 그대로 전달됨 → `${{Postgres.PGHOST}}` 로 다시 입력. 아래 배포 순서에 주의 문구 추가 |
+| 배포 준비 중 발견: Linux 에서 `./gradlew` 실패 가능 | `backend/gradlew` 가 Windows 에서 실행 권한 없이(100644) 커밋됨 | `git update-index --chmod=+x`, Dockerfile 에서도 `chmod +x` |
+| Railway PostgreSQL 이 **18.6** (로컬·테스트는 15) | Railway 가 새 DB 를 최신 버전으로 생성 | 이 설계가 쓰는 기능(행 잠금, CHECK, 부분 UNIQUE, `ON CONFLICT`, `SKIP LOCKED`)은 15·18 공통. 테스트 이미지를 `postgres:18-alpine` 으로 바꿔 **백엔드 테스트 159건 전부 통과**(동시 예약 3/47 동일) 확인 후 15 로 되돌림 |
+
+Vercel 은 Root Directory(`frontend`)와 `BACKEND_URL` 만 지정해 한 번에 배포됐다.
 
 ### 구성
 
@@ -127,7 +145,7 @@ Vercel (frontend/) ──BACKEND_URL──▶ Railway 백엔드 서비스 (backe
 
 1. **Railway** — New Project → Deploy from GitHub repo → 이 저장소 (`railway.toml` 이 Dockerfile 빌드를 지정)
 2. 같은 프로젝트에 **+ New → Database → PostgreSQL** 추가
-3. 백엔드 서비스 **Variables** (`${{Postgres.…}}` 는 Railway 참조 변수 문법):
+3. 백엔드 서비스 **Variables** → **Raw Editor** 에 붙여 넣기 (`${{Postgres.…}}` 는 Railway 참조 변수 문법 — **`$` 를 빠뜨리면 치환되지 않고 글자 그대로 전달된다**. `Postgres` 는 DB 서비스 카드의 이름):
 
    | 변수 | 값 |
    |---|---|
@@ -447,7 +465,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | Docker / docker compose | 처음 | 로컬 DB, Windows 에서 WSL2 필요(L023) | TODO |
 | Testcontainers | 처음 | `@ServiceConnection`, `CountDownLatch` 동시성 테스트 | TODO |
 | Next.js (App Router) | 처음 | 서버/클라이언트 컴포넌트, Server Action, `revalidatePath`, `searchParams`, `server-only` | TODO |
-| Railway / Vercel | 처음 | TODO(T15) | TODO |
+| Railway / Vercel | 처음 | Dockerfile 멀티 스테이지·빌드 컨텍스트, `railway.toml`, 참조 변수(`${{서비스.변수}}`), Deploy Logs 로 원인 찾기, Vercel Root Directory·환경변수 | TODO |
 
 ### Q8. 시간이 더 있었다면
 
@@ -484,7 +502,6 @@ HAVING i.booked_count <> COUNT(r.id);
 
 | 항목 | 현재 | 이유 |
 |---|---|---|
-| 배포 | **진행 예정 (T15)** | README 를 먼저 작성 |
 | 인증 | `X-User-Id` 헤더를 신뢰, 관리자 화면도 인증 없음 | 과제 명시. 실제 서비스라면 `/api/admin/**` 전체를 권한으로 막아야 함 |
 | 같은 멱등 키 + 다른 요청 본문 | 처음 결과를 돌려줌 (본문 비교 안 함) | 시간 대비 우선순위. Q8-3 |
 | 늦게 도착한 승인 | 상태 확정 스케줄러가 READY 1분 경과 + PG 에 기록 없음으로 FAILED 처리한 뒤 승인 요청이 PG 에 늦게 닿으면 그 승인은 반영·보상되지 않음 | PG 읽기 타임아웃(3초)보다 훨씬 긴 1분을 기다려 실제로는 거의 일어나지 않음. Q8-5 |
