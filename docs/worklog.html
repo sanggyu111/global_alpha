@@ -480,6 +480,30 @@ const LOG = [
     resolution: "README 나머지는 완료: 깨끗한 clone 검증(S1 브라우저, 테스트 159건, 프론트 lint·build), 시크릿 이력 점검(.env 커밋 이력 없음, 실제 비밀값 등장 0회). T15 완료 후 배포 섹션을 채우고 이 항목을 resolved 로.",
     refs: ["README.md"],
   },
+  {
+    id: "L045",
+    at: "2026-10-09 19:50",
+    task: "T15",
+    type: "fix",
+    status: "resolved",
+    title: "backend/gradlew 가 실행 권한 없이(100644) 커밋되어 있음",
+    detail: "배포 준비 중 `git ls-files -s backend/gradlew` → 100644. Windows 에서는 gradlew.bat 을 써서 드러나지 않았지만, Linux 빌드(Railway)·Mac/Linux 평가자가 README 대로 `./gradlew` 를 실행하면 Permission denied.",
+    cause: "Windows 에서 Spring Initializr zip 을 풀어 커밋하면서 실행 비트가 빠짐.",
+    resolution: "`git update-index --chmod=+x backend/gradlew` → 100755. Dockerfile 에서도 chmod +x 로 한 번 더 보장.",
+    refs: [],
+  },
+  {
+    id: "L046",
+    at: "2026-10-09 19:50",
+    task: "T15",
+    type: "decision",
+    status: "resolved",
+    title: "배포 준비: 멀티 스테이지 Dockerfile(빌드 컨텍스트 = 저장소 루트) + railway.toml, 이미지 안에서 테스트는 생략",
+    detail: "backend/Dockerfile: eclipse-temurin:17-jdk 에서 의존성 먼저 받고(캐시) bootJar → eclipse-temurin:17-jre 로 실행, JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75. railway.toml: builder=DOCKERFILE, dockerfilePath, healthcheckPath=/actuator/health. .dockerignore 로 frontend·docs·.env·빌드 산출물 제외.",
+    cause: "백엔드 빌드가 저장소 루트의 db/ 를 리소스로 포함하므로 컨텍스트가 루트여야 함. 이미지 빌드 안에는 Docker 가 없어 Testcontainers 테스트를 돌릴 수 없음.",
+    resolution: "로컬 확인: 이미지 빌드 554MB, 컨테이너를 PORT=8081 · DB 환경변수로 실행 → 헬스 UP, 예약 → 결제 CONFIRMED (컨테이너 안 모의 PG 자기 호출·웹훅 동작, 확정 actor=system:pg-webhook). 테스트는 로컬 ./gradlew test 로 검증.",
+    refs: ["docs/02-design.md §11"],
+  },
 ];
 </script>
 

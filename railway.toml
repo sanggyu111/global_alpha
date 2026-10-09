@@ -1,0 +1,14 @@
+# Railway 백엔드 서비스 설정 (config as code). 프론트는 Vercel 에 따로 배포한다.
+# DB 접속 정보 등 환경변수는 Railway 대시보드에서 설정한다 (README "배포" 참고). 비밀값은 이 파일에 넣지 않는다.
+
+[build]
+builder = "DOCKERFILE"
+# 빌드 컨텍스트는 저장소 루트 (Dockerfile 이 db/ 를 함께 복사)
+dockerfilePath = "backend/Dockerfile"
+
+[deploy]
+# DB 연결까지 포함한 헬스 체크가 UP 이어야 새 버전으로 트래픽을 넘긴다
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 180
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
