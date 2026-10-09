@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-09",
-  currentTask: "T04",
+  currentTask: "T05",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -52,9 +52,9 @@ const PROGRESS = {
     },
     {
       id: "T04", phase: "dev", title: "예약 생성 · 재고 선점 + 동시 예약 테스트",
-      status: "review", branch: "feat/T04-reservation-hold",
+      status: "done", branch: "feat/T04-reservation-hold",
       checks: { error: true, spec: true }, commits: ["319e46f", "5150996", "3c00f98", "a58939f", "1bdd897"],
-      note: "build 통과 (테스트 31건). 동시 예약 재고 3·요청 50 → 성공 3·SOLD_OUT 47·booked 3 (4회 반복 동일). S3 부분 매진 롤백, 같은 키 동시 2회 → 1건. 실제 앱 HTTP 확인 (201 → 200 재요청 → 마지막 1실 409). 선점 만료는 T05.",
+      note: "build 통과 (테스트 31건). 동시 예약 재고 3·요청 50 → 성공 3·SOLD_OUT 47·booked 3 (4회 반복 동일). S3 부분 매진 롤백, 같은 키 동시 2회 → 1건. 실제 앱 HTTP 확인 (201 → 200 재요청 → 마지막 1실 409). 선점 만료는 T05. 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T05", phase: "dev", title: "선점 만료 스케줄러",
