@@ -540,6 +540,30 @@ const LOG = [
     resolution: "02-design.md 8.3·7장·9장·12장 갱신. 결정: 달력은 기본 date 입력 + min (직접 만든 달력 대비 코드량), 관리자는 레이아웃 분리 + 비밀번호 게이트(①②)까지 — 백엔드 /api/admin 토큰 보호(③)는 하지 않고 README 타협에 기록. 목록 검색은 숙소별 호출(N+1) 대신 지역 단위 한 쿼리.",
     refs: ["docs/02-design.md §8.3"],
   },
+  {
+    id: "L050",
+    at: "2026-10-10 16:38",
+    task: "T17",
+    type: "error",
+    status: "resolved",
+    title: "테스트 16건 전부 ApplicationContext 로드 실패 — Docker 데몬 미실행",
+    detail: "./gradlew test --tests 'com.staypoint.property.*' → 16 failed, 원인 메시지 `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`.",
+    cause: "재부팅 후 Docker Desktop 이 꺼져 있어 Testcontainers 가 PostgreSQL 컨테이너를 띄우지 못함. 코드 문제 아님.",
+    resolution: "Docker Desktop 실행 후 재실행 → 16건 통과. 전체 build 164건 통과.",
+    refs: [],
+  },
+  {
+    id: "L051",
+    at: "2026-10-10 16:50",
+    task: "T17",
+    type: "decision",
+    status: "resolved",
+    title: "숙소 목록 캐시 60초 → no-store (보여주는 데이터가 바뀌면 캐시 기준도 바뀐다)",
+    detail: "T11 에서 숙소 목록은 이름·주소만 보여 revalidate: 60 이었다. T17 에서 객실 잔여 수를 함께 보여주고 매진 숙소를 숨기므로, 60초 캐시하면 매진된 숙소가 최대 1분간 보이거나 새로 빈 숙소가 안 보인다.",
+    cause: "",
+    resolution: "목록 화면을 no-store 로 전환. 숙소 상세의 숙소 정보(이름·주소·설명)는 그대로 60초 캐시. 가용 쿼리는 숙소 단위 쿼리와 SQL 을 공유(검색 범위 조건만 다름)해 두 화면의 가용 기준이 어긋나지 않게 함. README Q5 표 갱신.",
+    refs: ["README.md Q5"],
+  },
 ];
 </script>
 
