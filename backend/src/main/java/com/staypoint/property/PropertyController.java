@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.staypoint.property.PropertyDtos.Availability;
 import com.staypoint.property.PropertyDtos.PropertyDetail;
+import com.staypoint.property.PropertyDtos.PropertySearch;
 import com.staypoint.property.PropertyDtos.PropertySummary;
 
 @RestController
@@ -27,6 +28,15 @@ public class PropertyController {
 	@GetMapping
 	public List<PropertySummary> list(@RequestParam(required = false) String region) {
 		return propertyService.list(region);
+	}
+
+	/** 숙소 목록 화면 검색 (T17). 예약 가능한 객실이 있는 숙소만, 숙소마다 객실 요약을 붙여 돌려준다. */
+	@GetMapping("/search")
+	public PropertySearch search(@RequestParam(required = false) String region,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
+			@RequestParam int guests) {
+		return propertyService.search(region, checkIn, checkOut, guests);
 	}
 
 	@GetMapping("/{propertyId}")

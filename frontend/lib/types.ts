@@ -154,3 +154,16 @@ export type InventoryMismatch = {
   bookedCount: number;
   expectedBookedCount: number;
 };
+
+// 숙소 목록 검색 (T17) — 예약 가능한 객실이 있는 숙소만 온다
+export type RoomOffer = { roomTypeId: number; name: string; capacity: number; remaining: number; totalPrice: number };
+
+export type PropertyWithRooms = PropertySummary & { rooms: RoomOffer[] };
+
+export type PropertySearch = {
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guests: number;
+  properties: PropertyWithRooms[];
+};

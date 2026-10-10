@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,11 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.staypoint.common.error.BusinessException;
 import com.staypoint.common.error.ErrorCode;
 import com.staypoint.inventory.RoomRateRepository;
+import com.staypoint.property.AvailabilityRepository.AvailableRoomType;
 import com.staypoint.property.PropertyDtos.Availability;
 import com.staypoint.property.PropertyDtos.AvailableRoom;
 import com.staypoint.property.PropertyDtos.NightlyRate;
 import com.staypoint.property.PropertyDtos.PropertyDetail;
+import com.staypoint.property.PropertyDtos.PropertySearch;
 import com.staypoint.property.PropertyDtos.PropertySummary;
+import com.staypoint.property.PropertyDtos.PropertyWithRooms;
+import com.staypoint.property.PropertyDtos.RoomOffer;
 import com.staypoint.property.PropertyDtos.RoomTypeSummary;
 
 /** 숙소·객실 조회 (FR-SRCH-1~4). 읽기 전용. */
@@ -70,6 +75,29 @@ public class PropertyService {
 						room.totalPrice()))
 				.toList();
 		return new Availability(propertyId, checkIn, checkOut, nights, guests, rooms);
+	}
+
+	/**
+	 * 숙소 목록 검색 (T17): 지역의 숙소 중 기간 전체에 예약 가능한 객실이 있는 숙소와 그 객실 요약.
+	 * 가용 조건은 {@link #availability} 와 같고, 예약 가능한 객실이 0개인 숙소는 결과에서 빠진다.
+	 */
+	public PropertySearch search(String region, LocalDate checkIn, LocalDate checkOut, int guests) {
+		long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
+		validate(checkIn, checkOut, nights, guests);
+		String regionFilter = (region == null || region.isBlank()) ? null : region;
+
+		// 쿼리 결과는 숙소 id → 총액 순으로 정렬돼 있고, groupingBy 의 toList 는 그 순서를 유지한다
+		Map<Long, List<RoomOffer>> roomsByProperty = availabilityRepository
+				.findAvailableInRegion(regionFilter, checkIn, checkOut, nights, guests).stream()
+				.collect(Collectors.groupingBy(AvailableRoomType::propertyId,
+						Collectors.mapping(room -> new RoomOffer(room.roomTypeId(), room.name(), room.capacity(),
+								room.remaining(), room.totalPrice()), Collectors.toList())));
+
+		List<PropertyWithRooms> properties = list(regionFilter).stream()
+				.filter(p -> roomsByProperty.containsKey(p.id()))
+				.map(p -> new PropertyWithRooms(p.id(), p.name(), p.address(), p.region(), roomsByProperty.get(p.id())))
+				.toList();
+		return new PropertySearch(checkIn, checkOut, nights, guests, properties);
 	}
 
 	/** 예약 생성과 같은 기준 (FR-RES-5): 체크인 ≥ 오늘, 체크인 < 체크아웃, 1~30박, 인원 ≥ 1. */

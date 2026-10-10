@@ -39,4 +39,16 @@ public final class PropertyDtos {
 	public record Availability(Long propertyId, LocalDate checkIn, LocalDate checkOut, long nights, int guests,
 			List<AvailableRoom> rooms) {
 	}
+
+	/** 숙소 목록 검색용 객실 요약 (T17). 날짜별 요금은 상세 화면에서만 보여준다. */
+	public record RoomOffer(Long roomTypeId, String name, int capacity, int remaining, BigDecimal totalPrice) {
+	}
+
+	public record PropertyWithRooms(Long id, String name, String address, String region, List<RoomOffer> rooms) {
+	}
+
+	/** properties: 예약 가능한 객실이 1개 이상인 숙소만 (id 순). */
+	public record PropertySearch(LocalDate checkIn, LocalDate checkOut, long nights, int guests,
+			List<PropertyWithRooms> properties) {
+	}
 }
