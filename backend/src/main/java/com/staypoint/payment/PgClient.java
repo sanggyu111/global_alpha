@@ -16,6 +16,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.staypoint.common.SelfUrl;
 import com.staypoint.common.StaypointProperties;
+import com.staypoint.common.error.BusinessException;
+import com.staypoint.common.error.ErrorCode;
 
 /**
  * PG HTTP 클라이언트. 모의 PG 가 같은 앱에 있어도 반드시 HTTP 로 부른다 → 타임아웃·5xx 가 실제처럼 일어난다.
@@ -100,9 +102,39 @@ public class PgClient {
 		}
 	}
 
+	public enum CancelFaultType {
+		UNAVAILABLE, REJECTED
+	}
+
+	/**
+	 * 데모용 취소 장애 주입 값 (설계 5장 T20): 이 결제의 PG 취소를 지금부터 times 번 실패시킨다.
+	 * 모의 PG 가 결제별로 기억하므로 이후 재시도 요청에는 싣지 않아도 장애가 이어진다.
+	 */
+	public record CancelFault(int times, CancelFaultType type) {
+
+		public static final int MAX_TIMES = 10;
+
+		public CancelFault {
+			// 범위 밖 값을 PG 에 보내면 PG 의 400 이 "환불 거절" 로 처리되므로 여기서 먼저 막는다
+			if (times < 0 || times > MAX_TIMES) {
+				throw new BusinessException(ErrorCode.VALIDATION_FAILED, "failTimes 는 0~" + MAX_TIMES + " 사이여야 합니다.",
+						Map.of("failTimes", times));
+			}
+		}
+	}
+
 	/** 취소 요청. 같은 cancelKey 로 다시 부르면 PG 가 이전 결과를 돌려준다 (이중 환불 없음). */
 	public void cancel(String tid, String cancelKey, BigDecimal amount) {
-		call(() -> restClient.post().uri(baseUrl() + "/payments/{tid}/cancel", tid)
+		cancel(tid, cancelKey, amount, null);
+	}
+
+	/** fault 는 데모용 장애 주입 값 (null 이면 주입 없음). */
+	public void cancel(String tid, String cancelKey, BigDecimal amount, CancelFault fault) {
+		UriComponentsBuilder uri = UriComponentsBuilder.fromUriString(baseUrl() + "/payments/{tid}/cancel");
+		if (fault != null) {
+			uri.queryParam("failTimes", fault.times()).queryParam("failType", fault.type());
+		}
+		call(() -> restClient.post().uri(uri.buildAndExpand(tid).toUri())
 				.contentType(MediaType.APPLICATION_JSON)
 				.body(Map.of("cancelKey", cancelKey, "amount", amount))
 				.retrieve()

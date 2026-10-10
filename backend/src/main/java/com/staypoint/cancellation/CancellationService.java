@@ -3,6 +3,7 @@ package com.staypoint.cancellation;
 import org.springframework.stereotype.Service;
 
 import com.staypoint.payment.PaymentCancelExecutor;
+import com.staypoint.payment.PgClient;
 
 /**
  * 예약 취소 · 환불 (설계 4.5). 이 클래스에는 @Transactional 을 걸지 않는다:
@@ -20,10 +21,11 @@ public class CancellationService {
 		this.cancelExecutor = cancelExecutor;
 	}
 
-	public CancellationResponse cancel(Long reservationId, String userId) {
+	/** refundFault: 데모용 PG 환불 장애 주입 (T20, null 이면 없음). 이번 취소로 환불 요청이 생길 때만 PG 에 전달된다. */
+	public CancellationResponse cancel(Long reservationId, String userId, PgClient.CancelFault refundFault) {
 		CancellationProcessor.Cancelled cancelled = processor.cancel(reservationId, userId);
 		if (cancelled.refundCancelId() != null) {
-			cancelExecutor.attempt(cancelled.refundCancelId());
+			cancelExecutor.attempt(cancelled.refundCancelId(), refundFault);
 		}
 		return processor.currentResult(reservationId);
 	}

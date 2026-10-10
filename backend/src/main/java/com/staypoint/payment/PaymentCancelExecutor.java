@@ -50,6 +50,11 @@ public class PaymentCancelExecutor {
 	}
 
 	public void attempt(Long cancelId) {
+		attempt(cancelId, null);
+	}
+
+	/** fault 는 데모용 PG 장애 주입 값 (T20). 취소 직후 첫 시도에만 실리고, 이후 재시도는 PG 가 기억한 장애를 따른다. */
+	public void attempt(Long cancelId, PgClient.CancelFault fault) {
 		Target target = tx.execute(status -> {
 			PaymentCancel cancel = cancelRepository.findById(cancelId).orElseThrow();
 			if (cancel.getStatus() != PaymentCancel.Status.PENDING) {
@@ -65,7 +70,7 @@ public class PaymentCancelExecutor {
 		String error = null;
 		boolean retryable = true;
 		try {
-			pgClient.cancel(target.tid(), target.cancelKey(), target.amount());
+			pgClient.cancel(target.tid(), target.cancelKey(), target.amount(), fault);
 		} catch (PgUnavailableException e) {
 			error = e.getMessage();
 		} catch (PgRejectedException e) {
