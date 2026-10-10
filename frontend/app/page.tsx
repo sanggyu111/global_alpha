@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DateRangeFields } from "@/app/DateRangeFields";
 import { api } from "@/lib/api";
 import { seoulDate, won } from "@/lib/format";
 import type { PropertySearch } from "@/lib/types";
@@ -37,14 +38,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <option value="제주">제주</option>
           </select>
         </label>
-        <label>
-          체크인
-          <input type="date" name="checkIn" defaultValue={checkIn} required />
-        </label>
-        <label>
-          체크아웃
-          <input type="date" name="checkOut" defaultValue={checkOut} required />
-        </label>
+        <DateRangeFields today={seoulDate()} defaultCheckIn={checkIn} defaultCheckOut={checkOut} />
         <label>
           인원
           <input type="number" name="guests" min={1} max={10} defaultValue={guests} required />

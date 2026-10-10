@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { DateRangeFields } from "@/app/DateRangeFields";
 import { api } from "@/lib/api";
-import { won } from "@/lib/format";
+import { seoulDate, won } from "@/lib/format";
 import type { Availability, PropertyDetail } from "@/lib/types";
 
 type Search = { checkIn?: string; checkOut?: string; guests?: string };
@@ -46,14 +47,7 @@ export default async function PropertyPage({
 
       {/* GET 폼: 검색 조건이 URL 에 남아 새로고침·공유해도 같은 결과 */}
       <form className="inline card">
-        <label>
-          체크인
-          <input type="date" name="checkIn" defaultValue={checkIn} required />
-        </label>
-        <label>
-          체크아웃
-          <input type="date" name="checkOut" defaultValue={checkOut} required />
-        </label>
+        <DateRangeFields today={seoulDate()} defaultCheckIn={checkIn ?? ""} defaultCheckOut={checkOut ?? ""} />
         <label>
           인원
           <input type="number" name="guests" min={1} max={10} defaultValue={guests ?? "2"} required />
