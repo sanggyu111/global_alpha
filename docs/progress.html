@@ -137,8 +137,8 @@ const PROGRESS = {
     {
       id: "T18", phase: "dev", title: "날짜 입력 제한 — 체크인 ≥ 오늘, 체크아웃 ≥ 체크인+1",
       status: "done", branch: "feat/T18-date-range",
-      checks: { error: true, spec: true }, commits: ["215e841", "408a335", "d065308"],
-      note: "frontend lint·build 통과 (백엔드 변경 없음). 실제 Chrome 으로 목록·숙소 상세 각각 확인: 체크인 min = 오늘(서울), 체크아웃 min = 체크인+1, 체크인을 체크아웃 이후로 바꾸면 체크아웃이 체크인+1 로 이동, 체크아웃이 이미 뒤면 유지, 어제 날짜는 폼 검증에서 거부, 제출 시 URL·결과 반영 — 11개 항목 통과. 네이티브 달력의 비활성 날짜 표시는 브라우저 기능이라 iPhone 은 배포 후 확인. 사용자 리뷰 승인, main 병합. 후속 fix/T18-ios-date-clamp: iPhone 에서 이전 날짜가 골라짐(iOS Safari 가 min 무시) → onChange 에서 min 으로 보정, lint·build 통과, iPhone 확인은 배포 후.",
+      checks: { error: true, spec: true }, commits: ["215e841", "408a335", "d065308", "42ae7da"],
+      note: "frontend lint·build 통과 (백엔드 변경 없음). 실제 Chrome 으로 목록·숙소 상세 각각 확인: 체크인 min = 오늘(서울), 체크아웃 min = 체크인+1, 체크인을 체크아웃 이후로 바꾸면 체크아웃이 체크인+1 로 이동, 체크아웃이 이미 뒤면 유지, 어제 날짜는 폼 검증에서 거부, 제출 시 URL·결과 반영 — 11개 항목 통과. 네이티브 달력의 비활성 날짜 표시는 브라우저 기능이라 iPhone 은 배포 후 확인. 사용자 리뷰 승인, main 병합. 후속 fix/T18-ios-date-clamp: iPhone 에서 이전 날짜가 골라짐(iOS Safari 가 min 무시) → onChange 에서 min 으로 보정, lint·build 통과, 사용자가 iPhone 에서 확인. 후속 fix/T18-date-alert: 보정 시 alert 로 이유 안내, 보정·알림을 blur 시점으로 이동. lint·build 통과, 로컬 Chrome(puppeteer) 으로 목록·상세 각 13항목(키보드 입력·피커식 값 변경·제출) 통과.",
     },
   ],
 
