@@ -47,6 +47,19 @@ class MockPgService {
 	}
 
 	/**
+	 * 데모 장애 주입 (설계 5장 T20). failTimes 가 있으면 이 결제의 남은 실패 횟수를 새로 설정하고,
+	 * 남은 횟수가 있으면 1 줄이고 이번 호출이 실패해야 할 장애 종류를 돌려준다.
+	 * 실패 응답은 이 트랜잭션이 커밋된 뒤 컨트롤러가 던진다 — 여기서 던지면 차감까지 롤백된다.
+	 */
+	@Transactional
+	public Optional<MockPgCancelFault> takeCancelFault(String tid, Integer failTimes, MockPgCancelFault failType) {
+		if (failTimes != null) {
+			repository.setCancelFault(tid, failTimes, failType);
+		}
+		return repository.consumeCancelFault(tid);
+	}
+
+	/**
 	 * 전액·부분 취소. 같은 cancelKey 가 다시 오면 새로 취소하지 않고 처음 결과를 돌려준다
 	 * (우리 서비스가 타임아웃 후 재시도해도 두 번 환불되지 않음).
 	 */

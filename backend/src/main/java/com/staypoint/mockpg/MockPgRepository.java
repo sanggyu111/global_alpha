@@ -50,6 +50,24 @@ class MockPgRepository {
 		jdbc.update("UPDATE mockpg_payment SET canceled_amount = ?, status = ? WHERE tid = ?", canceledAmount, status, tid);
 	}
 
+	/** 데모 장애 주입: 이 결제의 취소를 지금부터 times 번 실패시킨다 (이전 설정은 덮어쓴다). */
+	void setCancelFault(String tid, int times, MockPgCancelFault type) {
+		jdbc.update("UPDATE mockpg_payment SET cancel_fail_remaining = ?, cancel_fail_type = ? WHERE tid = ?",
+				times, type.name(), tid);
+	}
+
+	/**
+	 * 남은 실패 횟수가 있으면 1 줄이고 장애 종류를 돌려준다.
+	 * 조건과 차감이 한 문장이라 동시에 호출돼도 정확히 설정한 횟수만큼만 실패한다.
+	 */
+	Optional<MockPgCancelFault> consumeCancelFault(String tid) {
+		return jdbc.query("""
+				UPDATE mockpg_payment SET cancel_fail_remaining = cancel_fail_remaining - 1
+				 WHERE tid = ? AND cancel_fail_remaining > 0
+				RETURNING cancel_fail_type
+				""", (rs, i) -> MockPgCancelFault.valueOf(rs.getString("cancel_fail_type")), tid).stream().findFirst();
+	}
+
 	Optional<MockPgCancel> findCancel(String cancelKey) {
 		return jdbc.query("SELECT cancel_key, tid, amount FROM mockpg_cancel WHERE cancel_key = ?",
 				(rs, i) -> new MockPgCancel(rs.getString("cancel_key"), rs.getString("tid"), rs.getBigDecimal("amount")),
