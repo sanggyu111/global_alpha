@@ -295,11 +295,21 @@ POST /api/reservations/{id}/cancel   (헤더: X-User-Id)
 | `mockpg.approve.fail-rate` / `?failRate=` | 승인 실패 확률 (0~1) | 0.1 |
 | `mockpg.approve.delay-ms` / `?delayMs=` | 응답 지연 | 300 |
 | `mockpg.cancel.fail-rate` | 취소 5xx 확률 | 0.0 |
+| 취소 `?failTimes=&failType=` | **(T20)** 이 결제(tid)의 취소를 지금부터 N번 실패시킨다. `UNAVAILABLE`(503) / `REJECTED`(422) | — |
 | `mockpg.webhook.enabled` / `duplicate-count` | 승인 후 웹훅 전송 여부·**중복 전송 횟수** | true / 2 |
 
 - 웹훅: 승인 처리 후 비동기로 `POST /api/payments/webhook` 을 `duplicate-count` 번 호출 → 중복 처리 방어를 데모로 보여줌.
 - 웹훅 요청에는 공유 비밀값 헤더(`X-Mock-PG-Secret`, 환경변수)를 붙이고 API 가 검증한다.
 - 프론트 결제 화면에서 실패율·지연을 선택해 시나리오를 재현할 수 있게 한다 (데모용).
+
+**T20 환불 실패 데모 (사용자 요청 2026-10-10)**
+- 요청: 배포본은 취소 실패율이 0 이라 자동 환불 실패 → 재시도 → `MANUAL_REVIEW` 흐름을 볼 수 없다. 평가자가 취소 화면에서 고를 수 있게 한다.
+- 확률(`fail-rate`)로는 안 되는 이유: 실패가 **스케줄러 재시도에서도 계속** 일어나야 하는데, 재시도 요청에는 사용자가 고른 값이 실리지 않는다. 또 "5번 실패 → 운영자 수동 재시도는 성공" 처럼 정해진 순서를 보여주려면 확률이 아니라 횟수여야 한다.
+- 방식: 취소 첫 시도에 `?failTimes=N&failType=` 을 붙이면 **모의 PG 가 그 결제(tid)에 "남은 실패 횟수" 를 저장**하고(`mockpg_payment.cancel_fail_remaining`·`cancel_fail_type`, V2 마이그레이션), 그 tid 의 취소 호출마다 1씩 줄이며 실패한다. 실패 시 취소는 기록하지 않으므로 같은 cancelKey 로 다시 시도할 수 있다.
+  - 장애 상태를 PG 쪽에 두는 이유: "PG 가 이 결제에 대해 한동안 장애" 를 흉내 내는 것이라 외부 시스템의 상태다. 우리 쪽 `payment_cancel` 에 데모 전용 컬럼을 넣지 않는다.
+  - 차감은 `UPDATE … SET remaining = remaining - 1 WHERE tid = ? AND remaining > 0` 한 문장 → 동시 호출에도 정확히 N번만 실패.
+- 화면(내 예약 상세 → 취소, 환불액이 있을 때만): 정상 환불 / PG 일시 장애 1회 → 약 1분 뒤 자동 재시도로 환불 / PG 장애 5회 지속 → 재시도 소진 후 `MANUAL_REVIEW`(약 15분) / PG 거절(4xx) → 즉시 `MANUAL_REVIEW`. 운영자 수동 재시도 때는 남은 실패 횟수가 0 이라 성공 → 흐름을 끝까지 볼 수 있다.
+- 관리자 "확인 필요" 화면에 **자동 재시도 중(PENDING)** 목록을 추가해 시도 횟수·다음 시도 시각이 쌓이는 과정을 볼 수 있게 한다.
 
 ---
 
@@ -342,7 +352,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | GET | `/api/reservations/me` | 내 예약 목록 | UI-2 |
 | GET | `/api/reservations/{id}` | 상세 + 환불 예정액 (지금 취소 시) | UI-2 |
 | POST | `/api/reservations/{id}/payments` | 결제 요청 (`Idempotency-Key`, 데모용 `failRate`·`delayMs`) | PAY-1~9 |
-| POST | `/api/reservations/{id}/cancel` | 취소 (멱등) | CAN-1~7 |
+| POST | `/api/reservations/{id}/cancel` | 취소 (멱등, 데모용 `failTimes`·`failType` — T20) | CAN-1~7 |
 | POST | `/api/payments/webhook` | 모의 PG 승인 통지 | PAY-5 |
 
 ### 관리자
@@ -353,7 +363,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | GET | `/api/admin/room-types/{id}/calendar?from&to` | 날짜별 재고·요금 | UI-4 |
 | PUT | `/api/admin/room-types/{id}/inventory` `{from, to, totalCount}` | 기간 재고 설정 (booked 미만 거부) | UI-4 |
 | PUT | `/api/admin/room-types/{id}/rates` `{from, to, price}` | 기간 요금 설정 | UI-4 |
-| GET | `/api/admin/payment-cancels?status=MANUAL_REVIEW` | 운영자 확인 대상 | UI-5, RTY-3 |
+| GET | `/api/admin/payment-cancels?status=MANUAL_REVIEW` | 운영자 확인 대상 (`status=PENDING` → 자동 재시도 중, T20 화면) | UI-5, RTY-3 |
 | POST | `/api/admin/payment-cancels/{id}/retry` | 수동 재시도 | RTY-3 |
 | GET | `/api/admin/inventory/mismatches` | 재고 정합 점검 | Q6 |
 | POST | `/api/admin/room-types/{id}/inventory/{date}/recount` | 재고 재계산 (booked_count ← 활성 예약 수) | Q6 |
@@ -489,6 +499,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | **T16** | README · 제출 점검 | 8개 질문 답 정리, 실행 방법 clean clone 검증, 시크릿 이력 점검, 투입 시간 | 부록 B 체크리스트 10개 충족 | 전체 흐름 설명 리허설 |
 | **T17** | 숙소 목록 날짜 검색 | 8.3 — `GET /api/properties/search`, 목록 화면 검색 폼·객실 요약·`no-store` | 지역·날짜 필터, 매진 숙소 제외, 정원 초과 제외, 검증 오류 테스트. lint·build, 로컬 화면 확인 | 왜 N+1 대신 한 쿼리인가, 왜 캐시를 끊었나 |
 | **T18** | 날짜 입력 제한 | 8.3 — `DateRangeFields` (목록·숙소 상세) | 오늘 이전·체크인 이후가 아닌 체크아웃 선택 불가, 체크인 변경 시 체크아웃 자동 조정 (브라우저 확인). lint·build | 왜 "오늘" 을 서버에서 넘기나, 화면 제한과 서버 검증의 관계 |
+| **T20** | 환불 실패 데모 | 5장 T20 — 모의 PG 결제별 취소 실패 횟수(V2), 취소 API 데모 파라미터, 취소 화면 선택, 관리자 재시도 중 목록 | 모의 PG: N회 실패 후 성공·422 거절. 취소 API: 거절 → MANUAL_REVIEW → 수동 재시도 성공, 장애 5회 → 재시도 소진 MANUAL_REVIEW. build·lint, 로컬 화면 확인 | 왜 확률이 아니라 횟수인가, 왜 장애 상태를 PG 쪽에 두나 |
 | ~~**T19**~~ | ~~관리자 / 사용자 화면 분리~~ | **취소** (8.3) — 과제 "인증 없음" 범위 유지, README 타협에 기록 | — | 왜 하지 않았나, 실무라면 어떻게 하나, 지금 무엇이 열려 있나 |
 
 - **시간 부족 시 축소 순서**: T14 → T13 → T12 일부 → T10 일부. T04·T07·T08 과 필수 테스트, README 는 축소 대상 아님.
