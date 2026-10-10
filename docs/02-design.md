@@ -375,7 +375,6 @@ HAVING i.booked_count <> COUNT(r.id);
 | `/reservations/new?roomTypeId&…` | 서버 + 폼 | 예약 정보 입력 → Server Action | — |
 | `/reservations/[id]/pay` | 서버 + **클라이언트(결제 버튼)** | 예약 요약, 결제 실행 | `no-store` |
 | `/me/reservations`, `/me/reservations/[id]` | 서버 + 클라이언트(취소 버튼) | 내 예약, 환불 예정액 | `no-store` |
-| `/admin/login` | 서버 + 폼 | **(T19)** 관리자 비밀번호 → Server Action → httpOnly 쿠키 | — |
 | `/admin/reservations` | 서버 | 필터는 URL `searchParams` → 서버에서 조회 | `no-store` |
 | `/admin/inventory` | 서버 + 폼 | 재고·요금 달력, 기간 일괄 수정 | `no-store` |
 | `/admin/issues` | 서버 | MANUAL_REVIEW 목록, 재고 불일치 | `no-store` |
@@ -386,10 +385,10 @@ HAVING i.booked_count <> COUNT(r.id);
 - **클라이언트 컴포넌트는 상호작용이 필요한 곳만**: 결제 버튼(연타 방지·진행 상태·멱등 키 유지), 취소 확인 버튼, 날짜 입력 보조.
 - **변경은 Server Action**: 폼 제출 → Next 서버에서 백엔드 호출 → `revalidatePath` 로 관련 페이지 갱신. 브라우저가 백엔드를 직접 부르지 않으므로 CORS 설정 불필요.
 - **실시간 재고 캐싱**: 가용 객실·예약 상태는 캐시하지 않는다(`no-store`). 화면에 보인 재고는 "참고값" 이고, **최종 판단은 예약 생성 시 DB 의 조건부 UPDATE** 가 한다 — 화면을 본 뒤 매진되면 `SOLD_OUT` 메시지를 보여줌. 캐시를 짧게 둬도 정확성은 깨지지 않지만, 매진된 객실을 보여주는 빈도가 늘어 굳이 캐시하지 않음.
-- **사용자 식별**: 상단에 사용자 ID 입력란 → 쿠키(`uid`) 저장 → 서버가 읽어 `X-User-Id` 로 전달. 관리자 화면은 인증 없음 (과제 명시) → T19 에서 화면 진입 게이트 추가 (8.3).
+- **사용자 식별**: 상단에 사용자 ID 입력란 → 쿠키(`uid`) 저장 → 서버가 읽어 `X-User-Id` 로 전달. 관리자 화면은 인증 없음 (과제 명시. T19 로 분리를 검토했으나 취소 — 8.3).
 - **결제 멱등 키**: 결제 화면에서 `crypto.randomUUID()` 로 만들어 `sessionStorage` 에 예약별로 보관 → 새로고침·재클릭에도 같은 키 재사용.
 
-### 8.3 사용 후 개선 (T17~T19, 사용자 피드백 2026-10-10)
+### 8.3 사용 후 개선 (T17·T18, T19 취소 — 사용자 피드백 2026-10-10)
 
 배포본을 직접 써 본 뒤 나온 요청. 핵심 흐름(재고·결제 정합)은 바꾸지 않는 화면·조회 개선이다.
 
@@ -407,14 +406,11 @@ HAVING i.booked_count <> COUNT(r.id);
   - 버린 대안: 직접 만든 달력 컴포넌트(모든 기기에서 같은 모양, 구간 강조 가능) — 코드 약 150줄 추가 대비 효과가 작아 사용자와 협의해 기본 입력 선택.
 - 화면 제한은 편의일 뿐, 최종 검증은 여전히 백엔드(`VALIDATION_FAILED`)가 한다 — URL 을 직접 고치면 화면 제한을 우회할 수 있기 때문.
 
-**T19 관리자 / 사용자 화면 분리**
+**T19 관리자 / 사용자 화면 분리 — 검토 후 취소 (2026-10-10)**
 - 요청: 관리자 화면과 사용자 화면을 구분.
-- ① **레이아웃 분리**: Route Group 으로 `app/(user)/…` 와 `app/admin/…` 의 레이아웃을 나눈다(URL 은 그대로). 루트 레이아웃은 `<html>` 만, 사용자 헤더(숙소·내 예약·사용자 ID)와 관리자 헤더(예약·재고·확인 필요·로그아웃)는 각 그룹 레이아웃에. 사용자 화면에서 관리자 링크 제거.
-- ② **관리자 진입 게이트**: `/admin/login` 에서 Server Action 이 입력값을 환경변수 `ADMIN_PASSWORD` 와 비교 → 맞으면 httpOnly·Secure·SameSite=Lax 쿠키 `admin_session` 발급. `middleware.ts` 가 `/admin/**`(login 제외) 요청마다 쿠키를 검사해 없거나 틀리면 `/admin/login` 으로 보낸다.
-  - 쿠키 값 = `SHA-256("staypoint-admin:" + ADMIN_PASSWORD)` — 비밀번호 자체를 쿠키에 두지 않고, 비밀번호를 모르면 만들 수 없다. 비밀번호를 바꾸면 기존 쿠키가 모두 무효. 미들웨어(Edge 런타임)에서도 쓸 수 있게 Web Crypto(`crypto.subtle`)로 계산.
-  - `ADMIN_PASSWORD` 가 비어 있으면 관리자 화면을 **잠근다**(fail closed). 로컬은 `.env.local` 에 값을 넣는다.
-- **범위 밖(알려진 한계)**: 백엔드 `/api/admin/**` 는 여전히 열려 있다 — 화면만 가린 것이라 API 를 직접 호출하면 우회된다. 막으려면 백엔드가 관리자 토큰 헤더를 요구하고 Next 서버(`server-only`)만 그 토큰을 붙이게 하면 된다(③). 사용자와 협의해 이번에는 ①② 만 하고 README "미구현·타협" 에 기록.
-- 사용자 식별(`X-User-Id`)은 과제 명시대로 그대로 둔다.
+- 검토한 안: ① Route Group 으로 레이아웃 분리 + 사용자 화면에서 관리자 링크 제거 ② `/admin/login` 비밀번호 → httpOnly 쿠키, `middleware.ts` 가 `/admin/**` 검사 ③ 백엔드 `/api/admin/**` 가 관리자 토큰 헤더를 요구하고 Next 서버(`server-only`)만 토큰을 붙임.
+- 확인한 사실: ①② 만으로는 API 가 그대로 열려 있다 (배포본에서 인증 없이 `GET /api/admin/reservations` → 200, Swagger 문서에 관리자 API 8개 노출). 진짜 방어선은 ③.
+- **결정: 하지 않는다.** 과제가 "인증은 하지 않는다" 를 명시했고, 계정·역할 체계 없이 공용 비밀번호를 붙이는 것은 과제 범위 밖의 부분적인 장치라 지금 구조(같은 앱, `/admin` 경로, 인증 없음)를 유지. 실무라면 어떻게 하는지(관리자 앱·도메인 분리, SSO·2FA, 백엔드 역할 기반 권한 검사)와 현재 노출 범위는 README "미구현·타협" 에 적는다.
 
 ---
 
@@ -429,7 +425,6 @@ HAVING i.booked_count <> COUNT(r.id);
 | `mockpg.*` | backend | 5장 장애 주입 설정 |
 | `MOCKPG_WEBHOOK_SECRET` | backend | 웹훅 공유 비밀 (커밋 금지) |
 | `BACKEND_URL` | frontend | 서버에서만 사용 (`NEXT_PUBLIC_` 아님 → 브라우저 노출 없음) |
-| `ADMIN_PASSWORD` | frontend | **(T19)** 관리자 화면 비밀번호. 서버·미들웨어에서만 사용. 비어 있으면 관리자 화면 잠금 (커밋 금지) |
 
 - 시크릿은 `.env` / 플랫폼 환경변수로만. 저장소에는 `.env.example` 만.
 - 시간: `Clock` 빈 (Asia/Seoul) 주입, DB 는 `timestamptz`. 테스트는 고정 Clock.
@@ -494,7 +489,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | **T16** | README · 제출 점검 | 8개 질문 답 정리, 실행 방법 clean clone 검증, 시크릿 이력 점검, 투입 시간 | 부록 B 체크리스트 10개 충족 | 전체 흐름 설명 리허설 |
 | **T17** | 숙소 목록 날짜 검색 | 8.3 — `GET /api/properties/search`, 목록 화면 검색 폼·객실 요약·`no-store` | 지역·날짜 필터, 매진 숙소 제외, 정원 초과 제외, 검증 오류 테스트. lint·build, 로컬 화면 확인 | 왜 N+1 대신 한 쿼리인가, 왜 캐시를 끊었나 |
 | **T18** | 날짜 입력 제한 | 8.3 — `DateRangeFields` (목록·숙소 상세) | 오늘 이전·체크인 이후가 아닌 체크아웃 선택 불가, 체크인 변경 시 체크아웃 자동 조정 (브라우저 확인). lint·build | 왜 "오늘" 을 서버에서 넘기나, 화면 제한과 서버 검증의 관계 |
-| **T19** | 관리자 / 사용자 화면 분리 | 8.3 — Route Group 레이아웃 분리, `/admin/login`, `middleware.ts` 쿠키 검사 | 사용자 화면에 관리자 링크 없음, 로그인 없이 `/admin/**` 접근 시 로그인으로 이동, 틀린 비밀번호 거부, 로그아웃. lint·build, 배포 환경변수 추가 | 미들웨어 동작, 쿠키 값 설계, API 가 열려 있다는 한계 |
+| ~~**T19**~~ | ~~관리자 / 사용자 화면 분리~~ | **취소** (8.3) — 과제 "인증 없음" 범위 유지, README 타협에 기록 | — | 왜 하지 않았나, 실무라면 어떻게 하나, 지금 무엇이 열려 있나 |
 
 - **시간 부족 시 축소 순서**: T14 → T13 → T12 일부 → T10 일부. T04·T07·T08 과 필수 테스트, README 는 축소 대상 아님.
 - T14 의 `payment_cancel` 생성은 T07·T08 에서 이미 하므로, T14 를 못 해도 **취소 요청은 기록되고 운영자가 볼 수 있다** (요구사항의 최소 조건 충족).
