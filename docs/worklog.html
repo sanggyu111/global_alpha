@@ -575,6 +575,17 @@ const LOG = [
     cause: "과제가 '인증은 하지 않는다' 를 명시. 화면 진입만 막는 공용 비밀번호는 계정·역할 체계 없는 부분적인 장치.",
     resolution: "사용자 결정으로 T19 취소, 지금 구조(같은 앱 /admin 경로, 인증 없음) 유지. 02-design.md 8.3·8.1·9장·12장에서 T19 를 '검토 후 취소' 로 정리, progress 에서 제거. README '미구현·타협' 에 현재 노출 범위(관리자 화면·API·Swagger)와 실무 방식(관리자 앱·도메인 분리, SSO·2FA, 백엔드 역할 검사) 기록.",
     refs: ["docs/02-design.md §8.3", "README.md 미구현·타협"],
+  },  {
+    id: "L053",
+    at: "2026-10-10",
+    task: "T18",
+    type: "fix",
+    status: "watch",
+    title: "iPhone 에서 체크인·체크아웃 이전 날짜가 선택됨 — iOS Safari 가 date input min 무시",
+    detail: "배포본을 iPhone 으로 확인하니 체크인에 오늘 이전 날짜가 골라짐. 데스크톱 Chrome 은 min 으로 달력 날짜가 비활성되어 T18 검증 때는 드러나지 않음. 백엔드가 과거 체크인을 거부하므로 데이터 문제는 아니고 화면 문제.",
+    cause: "iOS Safari 의 네이티브 날짜 피커가 min/max 속성을 반영하지 않음 (브라우저 동작).",
+    resolution: "DateRangeFields 의 onChange 에서 min 미만 값을 min 으로 보정 (체크인 < 오늘 → 오늘, 체크아웃 < 체크인+1 → 체크인+1). 피커에서 회색 표시까지 하려면 커스텀 달력 라이브러리가 필요해 의존성 추가 대비 이득이 적어 채택 안 함. iPhone 실기기 확인은 배포 후 (확인되면 resolved).",
+    refs: ["frontend/app/DateRangeFields.tsx", "README.md 클라이언트 컴포넌트 표"],
   },
 ];
 </script>
