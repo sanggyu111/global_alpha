@@ -2,6 +2,7 @@ package com.staypoint.property;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,15 +14,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 class AvailabilityRepository {
 
-	private final JdbcTemplate jdbc;
-
-	AvailabilityRepository(JdbcTemplate jdbc) {
-		this.jdbc = jdbc;
-	}
-
-	record AvailableRoomType(long roomTypeId, String name, int capacity, int remaining, BigDecimal totalPrice) {
-	}
-
 	/**
 	 * 숙박 기간 "모든 날짜" 에 잔여 재고 ≥ 1 이고 요금이 있으며 정원 ≥ 인원인 객실 타입.
 	 * <ul>
@@ -31,24 +23,60 @@ class AvailabilityRepository {
 	 * </ul>
 	 * 체크아웃 날짜는 재고를 쓰지 않으므로 포함하지 않는다 (stay_date &lt; checkOut).
 	 * 이 결과는 "참고값" 이다 — 최종 판단은 예약 생성 시 조건부 UPDATE 가 한다.
+	 * {@code %s} 자리에 검색 범위(숙소 하나 / 지역) 조건이 들어간다.
 	 */
+	private static final String AVAILABLE_SQL = """
+			SELECT p.id AS property_id, rt.id, rt.name, rt.capacity,
+			       MIN(i.total_count - i.booked_count) AS remaining,
+			       SUM(r.price)                        AS total_price
+			  FROM property p
+			  JOIN room_type rt     ON rt.property_id = p.id
+			  JOIN room_inventory i ON i.room_type_id = rt.id
+			                       AND i.stay_date >= ? AND i.stay_date < ?
+			  JOIN room_rate r      ON r.room_type_id = rt.id AND r.stay_date = i.stay_date
+			 WHERE rt.capacity >= ? %s
+			 GROUP BY p.id, rt.id, rt.name, rt.capacity
+			HAVING COUNT(*) = ? AND MIN(i.total_count - i.booked_count) >= 1
+			 ORDER BY p.id, total_price, rt.id
+			""";
+
+	private final JdbcTemplate jdbc;
+
+	AvailabilityRepository(JdbcTemplate jdbc) {
+		this.jdbc = jdbc;
+	}
+
+	record AvailableRoomType(long propertyId, long roomTypeId, String name, int capacity, int remaining,
+			BigDecimal totalPrice) {
+	}
+
+	/** 숙소 하나의 예약 가능 객실 (숙소 상세 화면). */
 	List<AvailableRoomType> findAvailable(long propertyId, LocalDate checkIn, LocalDate checkOut, long nights,
 			int guests) {
-		return jdbc.query("""
-				SELECT rt.id, rt.name, rt.capacity,
-				       MIN(i.total_count - i.booked_count) AS remaining,
-				       SUM(r.price)                        AS total_price
-				  FROM room_type rt
-				  JOIN room_inventory i ON i.room_type_id = rt.id
-				                       AND i.stay_date >= ? AND i.stay_date < ?
-				  JOIN room_rate r      ON r.room_type_id = rt.id AND r.stay_date = i.stay_date
-				 WHERE rt.property_id = ? AND rt.capacity >= ?
-				 GROUP BY rt.id, rt.name, rt.capacity
-				HAVING COUNT(*) = ? AND MIN(i.total_count - i.booked_count) >= 1
-				 ORDER BY total_price, rt.id
-				""",
-				(rs, i) -> new AvailableRoomType(rs.getLong("id"), rs.getString("name"), rs.getInt("capacity"),
-						rs.getInt("remaining"), rs.getBigDecimal("total_price")),
-				checkIn, checkOut, propertyId, guests, nights);
+		return query("AND p.id = ?", propertyId, checkIn, checkOut, nights, guests);
+	}
+
+	/**
+	 * 지역 전체(region 이 null 이면 모든 숙소)의 예약 가능 객실 (숙소 목록 화면, T17).
+	 * 숙소마다 {@link #findAvailable} 를 부르면 숙소 수만큼 쿼리가 나가므로(N+1) 한 번에 조회한다.
+	 */
+	List<AvailableRoomType> findAvailableInRegion(String region, LocalDate checkIn, LocalDate checkOut, long nights,
+			int guests) {
+		return region == null
+				? query("", null, checkIn, checkOut, nights, guests)
+				: query("AND p.region = ?", region, checkIn, checkOut, nights, guests);
+	}
+
+	private List<AvailableRoomType> query(String scopeCondition, Object scopeValue, LocalDate checkIn,
+			LocalDate checkOut, long nights, int guests) {
+		List<Object> args = new ArrayList<>(List.of(checkIn, checkOut, guests));
+		if (scopeValue != null) {
+			args.add(scopeValue);
+		}
+		args.add(nights);
+		return jdbc.query(AVAILABLE_SQL.formatted(scopeCondition),
+				(rs, i) -> new AvailableRoomType(rs.getLong("property_id"), rs.getLong("id"), rs.getString("name"),
+						rs.getInt("capacity"), rs.getInt("remaining"), rs.getBigDecimal("total_price")),
+				args.toArray());
 	}
 }
