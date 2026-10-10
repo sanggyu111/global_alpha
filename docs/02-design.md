@@ -337,6 +337,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | GET | `/api/properties?region=` | 숙소 목록 | SRCH-1 |
 | GET | `/api/properties/{id}` | 숙소 상세 + 객실 타입 | SRCH-1 |
 | GET | `/api/properties/{id}/availability?checkIn&checkOut&guests` | 예약 가능 객실 + 날짜별 요금 + 총액 | SRCH-2~4 |
+| GET | `/api/properties/search?region&checkIn&checkOut&guests` | **(T17)** 숙소별 예약 가능 객실 요약(타입·정원·잔여·총액). 예약 가능 객실이 없는 숙소는 제외 | SRCH-1~3 |
 | POST | `/api/reservations` | 예약 생성 (`Idempotency-Key`) | RES-1~6 |
 | GET | `/api/reservations/me` | 내 예약 목록 | UI-2 |
 | GET | `/api/reservations/{id}` | 상세 + 환불 예정액 (지금 취소 시) | UI-2 |
@@ -369,11 +370,12 @@ HAVING i.booked_count <> COUNT(r.id);
 
 | 경로 | 렌더링 | 데이터 | 캐시 |
 |---|---|---|---|
-| `/` | 서버 | 숙소 목록 + 검색 폼 | `revalidate: 60` (숙소 정보는 거의 안 바뀜) |
+| `/?region&checkIn&checkOut&guests` | 서버 + 클라이언트(날짜 입력) | **(T17)** 검색 폼(지역·날짜·인원) + 예약 가능 객실이 있는 숙소와 객실 요약 | **`no-store`** (잔여 수를 보여주므로. T17 이전에는 숙소 정보만 보여 `revalidate: 60`) |
 | `/properties/[id]?checkIn&checkOut&guests` | 서버 | 숙소 상세 + **가용 객실** | **`no-store`** (재고는 초 단위로 변함) |
 | `/reservations/new?roomTypeId&…` | 서버 + 폼 | 예약 정보 입력 → Server Action | — |
 | `/reservations/[id]/pay` | 서버 + **클라이언트(결제 버튼)** | 예약 요약, 결제 실행 | `no-store` |
 | `/me/reservations`, `/me/reservations/[id]` | 서버 + 클라이언트(취소 버튼) | 내 예약, 환불 예정액 | `no-store` |
+| `/admin/login` | 서버 + 폼 | **(T19)** 관리자 비밀번호 → Server Action → httpOnly 쿠키 | — |
 | `/admin/reservations` | 서버 | 필터는 URL `searchParams` → 서버에서 조회 | `no-store` |
 | `/admin/inventory` | 서버 + 폼 | 재고·요금 달력, 기간 일괄 수정 | `no-store` |
 | `/admin/issues` | 서버 | MANUAL_REVIEW 목록, 재고 불일치 | `no-store` |
@@ -384,8 +386,35 @@ HAVING i.booked_count <> COUNT(r.id);
 - **클라이언트 컴포넌트는 상호작용이 필요한 곳만**: 결제 버튼(연타 방지·진행 상태·멱등 키 유지), 취소 확인 버튼, 날짜 입력 보조.
 - **변경은 Server Action**: 폼 제출 → Next 서버에서 백엔드 호출 → `revalidatePath` 로 관련 페이지 갱신. 브라우저가 백엔드를 직접 부르지 않으므로 CORS 설정 불필요.
 - **실시간 재고 캐싱**: 가용 객실·예약 상태는 캐시하지 않는다(`no-store`). 화면에 보인 재고는 "참고값" 이고, **최종 판단은 예약 생성 시 DB 의 조건부 UPDATE** 가 한다 — 화면을 본 뒤 매진되면 `SOLD_OUT` 메시지를 보여줌. 캐시를 짧게 둬도 정확성은 깨지지 않지만, 매진된 객실을 보여주는 빈도가 늘어 굳이 캐시하지 않음.
-- **사용자 식별**: 상단에 사용자 ID 입력란 → 쿠키(`uid`) 저장 → 서버가 읽어 `X-User-Id` 로 전달. 관리자 화면은 인증 없음 (과제 명시).
+- **사용자 식별**: 상단에 사용자 ID 입력란 → 쿠키(`uid`) 저장 → 서버가 읽어 `X-User-Id` 로 전달. 관리자 화면은 인증 없음 (과제 명시) → T19 에서 화면 진입 게이트 추가 (8.3).
 - **결제 멱등 키**: 결제 화면에서 `crypto.randomUUID()` 로 만들어 `sessionStorage` 에 예약별로 보관 → 새로고침·재클릭에도 같은 키 재사용.
+
+### 8.3 사용 후 개선 (T17~T19, 사용자 피드백 2026-10-10)
+
+배포본을 직접 써 본 뒤 나온 요청. 핵심 흐름(재고·결제 정합)은 바꾸지 않는 화면·조회 개선이다.
+
+**T17 숙소 목록에서 날짜로 검색**
+- 요청: 목록 화면에서도 날짜를 고르고, 숙소마다 객실 타입과 잔여 수를 보여주고, 잔여 객실이 없는 숙소는 숨긴다.
+- 백엔드 `GET /api/properties/search` 하나로 처리. 기존 가용 검색 쿼리(`findAvailable`: 기간 전체 재고 ≥ 1 · 요금 존재 · 정원)를 숙소 1개 대신 **지역 전체**로 넓혀 한 번에 조회하고, 서비스에서 숙소별로 묶는다. 예약 가능 객실이 0개인 숙소는 결과에 없다.
+  - 버린 대안: 프론트가 숙소 목록을 받은 뒤 숙소마다 `availability` 호출 → 숙소 수만큼 요청(N+1), 서버 컴포넌트 렌더가 가장 느린 호출에 묶임.
+  - 검증 규칙(오늘 이후, 1~30박, 인원 ≥ 1)은 `availability` 와 같은 메서드를 재사용.
+- 화면: 잔여 수가 들어가므로 `revalidate: 60` → `no-store`. 숙소 이름 링크에 고른 날짜·인원을 넘겨 상세에서 다시 입력하지 않게 한다. 기존 `GET /api/properties` 는 관리자 화면 등에서 그대로 쓴다.
+
+**T18 날짜 입력 제한**
+- 요청: 체크인은 오늘부터, 체크아웃은 체크인 다음 날부터만 고를 수 있고, 고를 수 없는 날짜는 달력에서 눌리지 않게.
+- 클라이언트 컴포넌트 `DateRangeFields` (목록·숙소 상세 공용): 브라우저 기본 `<input type="date">` 에 `min` 지정 — 체크인 `min` = 오늘, 체크아웃 `min` = 체크인 + 1일. 체크인을 바꿔 체크아웃이 그 이전이 되면 체크아웃을 체크인 + 1일로 옮긴다. iOS Safari·Chrome 달력은 `min` 이전 날짜를 회색으로 비활성화한다.
+  - "오늘" 은 **서버가 Asia/Seoul 기준으로 계산해 prop 으로 넘긴다** — 브라우저 시간대에 따라 하루 어긋나거나 서버/클라이언트 렌더 결과가 달라지는(hydration 불일치) 문제를 피함.
+  - 버린 대안: 직접 만든 달력 컴포넌트(모든 기기에서 같은 모양, 구간 강조 가능) — 코드 약 150줄 추가 대비 효과가 작아 사용자와 협의해 기본 입력 선택.
+- 화면 제한은 편의일 뿐, 최종 검증은 여전히 백엔드(`VALIDATION_FAILED`)가 한다 — URL 을 직접 고치면 화면 제한을 우회할 수 있기 때문.
+
+**T19 관리자 / 사용자 화면 분리**
+- 요청: 관리자 화면과 사용자 화면을 구분.
+- ① **레이아웃 분리**: Route Group 으로 `app/(user)/…` 와 `app/admin/…` 의 레이아웃을 나눈다(URL 은 그대로). 루트 레이아웃은 `<html>` 만, 사용자 헤더(숙소·내 예약·사용자 ID)와 관리자 헤더(예약·재고·확인 필요·로그아웃)는 각 그룹 레이아웃에. 사용자 화면에서 관리자 링크 제거.
+- ② **관리자 진입 게이트**: `/admin/login` 에서 Server Action 이 입력값을 환경변수 `ADMIN_PASSWORD` 와 비교 → 맞으면 httpOnly·Secure·SameSite=Lax 쿠키 `admin_session` 발급. `middleware.ts` 가 `/admin/**`(login 제외) 요청마다 쿠키를 검사해 없거나 틀리면 `/admin/login` 으로 보낸다.
+  - 쿠키 값 = `SHA-256("staypoint-admin:" + ADMIN_PASSWORD)` — 비밀번호 자체를 쿠키에 두지 않고, 비밀번호를 모르면 만들 수 없다. 비밀번호를 바꾸면 기존 쿠키가 모두 무효. 미들웨어(Edge 런타임)에서도 쓸 수 있게 Web Crypto(`crypto.subtle`)로 계산.
+  - `ADMIN_PASSWORD` 가 비어 있으면 관리자 화면을 **잠근다**(fail closed). 로컬은 `.env.local` 에 값을 넣는다.
+- **범위 밖(알려진 한계)**: 백엔드 `/api/admin/**` 는 여전히 열려 있다 — 화면만 가린 것이라 API 를 직접 호출하면 우회된다. 막으려면 백엔드가 관리자 토큰 헤더를 요구하고 Next 서버(`server-only`)만 그 토큰을 붙이게 하면 된다(③). 사용자와 협의해 이번에는 ①② 만 하고 README "미구현·타협" 에 기록.
+- 사용자 식별(`X-User-Id`)은 과제 명시대로 그대로 둔다.
 
 ---
 
@@ -400,6 +429,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | `mockpg.*` | backend | 5장 장애 주입 설정 |
 | `MOCKPG_WEBHOOK_SECRET` | backend | 웹훅 공유 비밀 (커밋 금지) |
 | `BACKEND_URL` | frontend | 서버에서만 사용 (`NEXT_PUBLIC_` 아님 → 브라우저 노출 없음) |
+| `ADMIN_PASSWORD` | frontend | **(T19)** 관리자 화면 비밀번호. 서버·미들웨어에서만 사용. 비어 있으면 관리자 화면 잠금 (커밋 금지) |
 
 - 시크릿은 `.env` / 플랫폼 환경변수로만. 저장소에는 `.env.example` 만.
 - 시간: `Clock` 빈 (Asia/Seoul) 주입, DB 는 `timestamptz`. 테스트는 고정 Clock.
@@ -462,6 +492,9 @@ HAVING i.booked_count <> COUNT(r.id);
 | **T14** | 결제 취소 재시도 | 4.6 스케줄러, 백오프, MANUAL_REVIEW, 수동 재시도 | S8 테스트 통과 | 무한 재시도 금지, "그 돈은 어떻게 되나" |
 | **T15** | 배포 | Dockerfile, Railway(백엔드+DB), Vercel(프론트) | 배포 URL 에서 S1 수행, 막힌 지점 기록 | 배포 선택 이유, 트래픽 10배 시 |
 | **T16** | README · 제출 점검 | 8개 질문 답 정리, 실행 방법 clean clone 검증, 시크릿 이력 점검, 투입 시간 | 부록 B 체크리스트 10개 충족 | 전체 흐름 설명 리허설 |
+| **T17** | 숙소 목록 날짜 검색 | 8.3 — `GET /api/properties/search`, 목록 화면 검색 폼·객실 요약·`no-store` | 지역·날짜 필터, 매진 숙소 제외, 정원 초과 제외, 검증 오류 테스트. lint·build, 로컬 화면 확인 | 왜 N+1 대신 한 쿼리인가, 왜 캐시를 끊었나 |
+| **T18** | 날짜 입력 제한 | 8.3 — `DateRangeFields` (목록·숙소 상세) | 오늘 이전·체크인 이후가 아닌 체크아웃 선택 불가, 체크인 변경 시 체크아웃 자동 조정 (브라우저 확인). lint·build | 왜 "오늘" 을 서버에서 넘기나, 화면 제한과 서버 검증의 관계 |
+| **T19** | 관리자 / 사용자 화면 분리 | 8.3 — Route Group 레이아웃 분리, `/admin/login`, `middleware.ts` 쿠키 검사 | 사용자 화면에 관리자 링크 없음, 로그인 없이 `/admin/**` 접근 시 로그인으로 이동, 틀린 비밀번호 거부, 로그아웃. lint·build, 배포 환경변수 추가 | 미들웨어 동작, 쿠키 값 설계, API 가 열려 있다는 한계 |
 
 - **시간 부족 시 축소 순서**: T14 → T13 → T12 일부 → T10 일부. T04·T07·T08 과 필수 테스트, README 는 축소 대상 아님.
 - T14 의 `payment_cancel` 생성은 T07·T08 에서 이미 하므로, T14 를 못 해도 **취소 요청은 기록되고 운영자가 볼 수 있다** (요구사항의 최소 조건 충족).
