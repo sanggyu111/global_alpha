@@ -398,7 +398,7 @@ sequenceDiagram
 
 **기본은 서버 컴포넌트.** 데이터는 서버에서 가져와 HTML 로 보낸다. 백엔드 호출은 [`lib/api.ts`](frontend/lib/api.ts) 한 곳(`import "server-only"`)에서만 하고, `BACKEND_URL` 은 `NEXT_PUBLIC_` 이 아니라 브라우저에 노출되지 않는다. 변경은 Server Action ([`app/actions.ts`](frontend/app/actions.ts)) → `revalidatePath`.
 
-**클라이언트 컴포넌트는 상호작용이 꼭 필요한 4곳뿐**
+**클라이언트 컴포넌트는 상호작용이 꼭 필요한 5곳뿐**
 
 | 컴포넌트 | 클라이언트여야 하는 이유 |
 |---|---|
@@ -406,6 +406,7 @@ sequenceDiagram
 | `ReservationForm` | 제출 중 잠금, 실패 메시지(`useActionState`). 멱등 키는 서버가 그린 hidden 필드 |
 | `CancelButton` | 확인 창(환불 예정액 안내), 처리 중 잠금 |
 | `PeriodForm` (관리자 재고·요금) | 제출 중 잠금, 거부 사유(예약 수보다 적게 줄이려는 날짜) 표시 |
+| `DateRangeFields` (숙소 목록·상세 날짜, T18) | 체크인을 바꾸면 체크아웃의 `min` 과 값을 즉시 바꿔야 함(체크인 ≥ 오늘, 체크아웃 ≥ 체크인 + 1일). "오늘" 은 **서버가 Asia/Seoul 기준으로 계산해 prop 으로 넘긴다** — 브라우저에서 계산하면 기기 시간대에 따라 하루 어긋나고 서버 렌더 결과와 달라질 수 있다. 화면 제한은 편의일 뿐, URL 을 직접 고치면 우회되므로 최종 검증은 백엔드 |
 
 **캐싱 기준: "초 단위로 변하는가"**
 

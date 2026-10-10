@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-10",
-  currentTask: "T17",
+  currentTask: "T16",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -130,15 +130,15 @@ const PROGRESS = {
     },
     {
       id: "T17", phase: "dev", title: "숙소 목록 날짜 검색 — /api/properties/search · 객실 요약 · 매진 숙소 숨김",
-      status: "review", branch: "feat/T17-property-search",
+      status: "done", branch: "feat/T17-property-search",
       checks: { error: true, spec: true }, commits: ["95ac65a", "b17fbf8", "2a3af8b", "707dc24"],
-      note: "backend build 통과 (테스트 164건 = 기존 159 + 목록 검색 5), frontend lint·build 통과. 로컬 실제 앱: 시드 3개 숙소에 객실 타입·잔여·총액 표시, 숙소 링크에 날짜·인원 전달, 제주 두 객실을 하루 매진시키면 목록에서 사라지고 매진 날짜를 피하면 다시 보임 (확인 후 원복, 불일치 0). 리뷰 대기.",
+      note: "backend build 통과 (테스트 164건 = 기존 159 + 목록 검색 5), frontend lint·build 통과. 로컬 실제 앱: 시드 3개 숙소에 객실 타입·잔여·총액 표시, 숙소 링크에 날짜·인원 전달, 제주 두 객실을 하루 매진시키면 목록에서 사라지고 매진 날짜를 피하면 다시 보임 (확인 후 원복, 불일치 0). 사용자 리뷰 승인, main 병합.",
     },
     {
       id: "T18", phase: "dev", title: "날짜 입력 제한 — 체크인 ≥ 오늘, 체크아웃 ≥ 체크인+1",
-      status: "todo", branch: "feat/T18-date-range",
-      checks: { error: null, spec: null }, commits: [],
-      note: "기본 date 입력 + min, '오늘' 은 서버(Asia/Seoul)가 계산해 전달 (L049).",
+      status: "done", branch: "feat/T18-date-range",
+      checks: { error: true, spec: true }, commits: ["215e841", "408a335"],
+      note: "frontend lint·build 통과 (백엔드 변경 없음). 실제 Chrome 으로 목록·숙소 상세 각각 확인: 체크인 min = 오늘(서울), 체크아웃 min = 체크인+1, 체크인을 체크아웃 이후로 바꾸면 체크아웃이 체크인+1 로 이동, 체크아웃이 이미 뒤면 유지, 어제 날짜는 폼 검증에서 거부, 제출 시 URL·결과 반영 — 11개 항목 통과. 네이티브 달력의 비활성 날짜 표시는 브라우저 기능이라 iPhone 은 배포 후 확인. 사용자 리뷰 승인, main 병합.",
     },
   ],
 
