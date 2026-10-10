@@ -176,6 +176,94 @@ class PropertyApiTest {
 				.andExpect(status().isNotFound());
 	}
 
+	// ---- 숙소 목록 검색 (T17) ----
+
+	@Test
+	void 목록_검색은_숙소마다_예약_가능한_객실_요약을_붙이고_지역으로_거른다() throws Exception {
+		long busanRoom = busanProperty(1);
+		long busanId = jdbc.queryForObject("SELECT property_id FROM room_type WHERE id = ?", Long.class, busanRoom);
+
+		listSearch(null, in, in.plusDays(2), 2)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.nights").value(2))
+				.andExpect(jsonPath("$.properties[*].id", contains((int) propertyId, (int) busanId)))
+				.andExpect(jsonPath("$.properties[0].rooms[*].name", contains("스탠다드", "패밀리")))
+				.andExpect(jsonPath("$.properties[0].rooms[0].remaining").value(3))
+				.andExpect(jsonPath("$.properties[0].rooms[0].totalPrice").value(200_000))
+				.andExpect(jsonPath("$.properties[0].rooms[1].capacity").value(4));
+
+		listSearch("부산", in, in.plusDays(2), 2)
+				.andExpect(jsonPath("$.properties", hasSize(1)))
+				.andExpect(jsonPath("$.properties[0].name").value("부산 호텔"))
+				.andExpect(jsonPath("$.properties[0].rooms[0].remaining").value(1));
+	}
+
+	@Test
+	void 목록_검색에서_기간_중_하루라도_모든_객실이_매진인_숙소는_빠진다() throws Exception {
+		long busanRoom = busanProperty(1);
+		fixtures.setBooked(busanRoom, in.plusDays(1), 1);
+
+		listSearch(null, in, in.plusDays(2), 2)
+				.andExpect(jsonPath("$.properties[*].name", contains("테스트 호텔")));
+		// 매진 날짜를 피하면 다시 보인다
+		listSearch(null, in.plusDays(2), in.plusDays(3), 2)
+				.andExpect(jsonPath("$.properties", hasSize(2)));
+	}
+
+	@Test
+	void 목록_검색에서_매진된_객실_타입만_빠지고_숙소는_남는다() throws Exception {
+		fixtures.setBooked(family, in, 1);
+
+		listSearch(null, in, in.plusDays(1), 2)
+				.andExpect(jsonPath("$.properties[0].rooms[*].name", contains("스탠다드")));
+	}
+
+	@Test
+	void 목록_검색에서_정원을_넘는_인원이면_맞는_객실이_있는_숙소만_나온다() throws Exception {
+		busanProperty(1); // 정원 2
+
+		listSearch(null, in, in.plusDays(1), 3)
+				.andExpect(jsonPath("$.properties", hasSize(1)))
+				.andExpect(jsonPath("$.properties[0].rooms[*].name", contains("패밀리")));
+		listSearch(null, in, in.plusDays(1), 5)
+				.andExpect(jsonPath("$.properties", hasSize(0)));
+	}
+
+	@Test
+	void 목록_검색의_잘못된_조건은_상세_검색과_같은_기준으로_400() throws Exception {
+		LocalDate today = LocalDate.now(clock);
+		listSearch(null, in, in, 2).andExpect(status().isBadRequest()).andExpect(jsonPath("$.details.checkOut").exists());
+		listSearch(null, today.minusDays(1), today.plusDays(1), 2).andExpect(jsonPath("$.details.checkIn").exists());
+		listSearch(null, in, in.plusDays(31), 2).andExpect(jsonPath("$.details.checkOut").exists());
+		listSearch(null, in, in.plusDays(1), 0).andExpect(jsonPath("$.details.guests").exists());
+		mockMvc.perform(get("/api/properties/search")).andExpect(status().isBadRequest());
+	}
+
+	/** 부산 숙소 + 정원 2 객실 타입 (재고 total, 1박 150,000). */
+	private long busanProperty(int total) {
+		long id = jdbc.queryForObject(
+				"INSERT INTO property (name, address, region) VALUES ('부산 호텔', '부산 해운대구', '부산') RETURNING id", Long.class);
+		long roomTypeId = jdbc.queryForObject("""
+				INSERT INTO room_type (property_id, name, capacity, default_total_rooms) VALUES (?, '오션뷰', 2, ?) RETURNING id
+				""", Long.class, id, total);
+		for (int d = 0; d < 5; d++) {
+			jdbc.update("INSERT INTO room_inventory (room_type_id, stay_date, total_count) VALUES (?, ?, ?)", roomTypeId, in.plusDays(d), total);
+			jdbc.update("INSERT INTO room_rate (room_type_id, stay_date, price) VALUES (?, ?, 150000)", roomTypeId, in.plusDays(d));
+		}
+		return roomTypeId;
+	}
+
+	private ResultActions listSearch(String region, LocalDate checkIn, LocalDate checkOut, int guests) throws Exception {
+		var request = get("/api/properties/search")
+				.param("checkIn", checkIn.toString())
+				.param("checkOut", checkOut.toString())
+				.param("guests", String.valueOf(guests));
+		if (region != null) {
+			request.param("region", region);
+		}
+		return mockMvc.perform(request);
+	}
+
 	private ResultActions search(LocalDate checkIn, LocalDate checkOut, int guests) throws Exception {
 		return mockMvc.perform(get("/api/properties/{id}/availability", propertyId)
 				.param("checkIn", checkIn.toString())
