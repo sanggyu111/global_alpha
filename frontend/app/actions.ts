@@ -81,12 +81,21 @@ export type CancelResponse = {
 
 export type CancelResult = { ok: true; data: CancelResponse } | { ok: false; error: ApiError };
 
+export type RefundFault = { failTimes: number; failType: "UNAVAILABLE" | "REJECTED" };
+
 /**
  * 예약 취소. 이미 취소된 예약을 다시 취소해도 백엔드가 처음 결과를 돌려주므로(멱등) 별도 키가 필요 없다.
  * 취소되면 재고가 늘어나므로 숙소 화면도 다시 검증한다.
+ * refundFault 는 데모용 환불 장애 주입 값 (T20 — 모의 PG 가 이 결제의 환불을 failTimes 번 실패시킨다).
  */
-export async function cancelReservation(reservationId: number): Promise<CancelResult> {
-  const result = await api<CancelResponse>(`/api/reservations/${reservationId}/cancel`, {
+export async function cancelReservation(
+  reservationId: number,
+  refundFault: RefundFault | null = null,
+): Promise<CancelResult> {
+  const query = refundFault
+    ? `?${new URLSearchParams({ failTimes: String(refundFault.failTimes), failType: refundFault.failType })}`
+    : "";
+  const result = await api<CancelResponse>(`/api/reservations/${reservationId}/cancel${query}`, {
     method: "POST",
     userId: await getUserId(),
   });

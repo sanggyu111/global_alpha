@@ -177,6 +177,31 @@ class MockPgApiTest {
 	}
 
 	@Test
+	void failTimes_를_주면_그_결제의_취소가_파라미터_없는_이후_요청까지_정확히_N번_실패한다() throws Exception {
+		String tid = approvedTid("O-1", 100_000);
+
+		cancel(tid, "C-1", 100_000, "?failTimes=2").andExpect(status().isServiceUnavailable());
+		cancel(tid, "C-1", 100_000, "").andExpect(status().isServiceUnavailable()); // 재시도에도 장애가 이어짐
+		assertThat(count("mockpg_cancel")).isZero();
+
+		cancel(tid, "C-1", 100_000, "")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("CANCELED"));
+	}
+
+	@Test
+	void failType_REJECTED_는_422_로_거절하고_횟수를_다_쓰면_취소된다() throws Exception {
+		String tid = approvedTid("O-1", 100_000);
+
+		cancel(tid, "C-1", 100_000, "?failTimes=1&failType=REJECTED")
+				.andExpect(status().isUnprocessableContent())
+				.andExpect(jsonPath("$.code").value("PG_REJECTED"));
+
+		cancel(tid, "C-1", 100_000, "").andExpect(status().isOk());
+		assertThat(jdbc.queryForObject("SELECT cancel_fail_remaining FROM mockpg_payment", Integer.class)).isZero();
+	}
+
+	@Test
 	void 없는_tid_취소는_404_거절된_결제는_취소할_수_없다() throws Exception {
 		cancel("T-NOPE", "C-1", 1_000, "").andExpect(status().isNotFound());
 

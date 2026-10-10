@@ -103,11 +103,13 @@ npm run lint && npm run build # 타입 체크 포함
 | PG 타임아웃 | "응답 지연 5초" (백엔드 PG 읽기 타임아웃 3초) → 처리 중 → 웹훅/재조회로 확정 |
 | 마지막 1실 경쟁 | "스테이포인트 제주 애월 / 독채 풀빌라" 는 재고 1실. 두 사용자 ID 로 같은 날짜 예약 → 한 명만 성공 |
 | 취소·환불 | 상단 "내 예약" → 상세 → 지금 취소 시 환불 예정액 확인 → 예약 취소 |
+| **환불 실패 → 운영자 확인** | 확정 예약 상세 → "데모: 모의 PG 환불 결과" 에서 고른 뒤 예약 취소 → 상단 "관리자" → "확인 필요". **PG 거절(4xx)** 은 즉시 "자동 환불 실패(MANUAL_REVIEW)" 에 노출 → "수동 재시도" → 상세에 "환불 완료". **PG 장애 1회** 는 "자동 재시도 중" 에 보였다가 약 1분 뒤 환불 완료. **PG 장애 5회** 는 1·2·4·8분 간격 재시도를 모두 실패해 약 15분 뒤 MANUAL_REVIEW → 수동 재시도로 환불 완료 |
 | 선점 만료 | 결제하지 않고 10분 경과 → 스케줄러가 CANCELED(HOLD_EXPIRED) + 재고 복원 |
 | 관리자 | 상단 "관리자" → 예약 목록 필터·페이지 / 재고·요금 기간 수정 / 확인 필요(자동 환불 실패·재고 불일치) |
 
 - 사용자 식별은 인증 대신 상단 "사용자 ID" 입력값을 쿠키에 두고 백엔드에 `X-User-Id` 헤더로 보낸다 (과제 명시).
 - 모의 PG 장애는 결제 화면의 선택값 또는 설정으로 주입한다: `mockpg.approve.fail-rate`, `mockpg.approve.delay-ms`, `mockpg.cancel.fail-rate` ([application.yml](backend/src/main/resources/application.yml)). 예: `./gradlew bootRun --args='--mockpg.cancel.fail-rate=1.0'` 로 환불이 계속 실패하는 상황 → 5회 후 관리자 "확인 필요" 에 노출.
+- 환불 실패는 취소 화면의 선택값으로도 주입한다 (`POST /api/reservations/{id}/cancel?failTimes=N&failType=UNAVAILABLE|REJECTED`). 확률이 아니라 **횟수**이고, 모의 PG 가 그 결제(tid)에 남은 실패 횟수를 기억한다. 재시도 스케줄러의 요청에는 사용자가 고른 값이 실리지 않으므로 장애가 재시도까지 이어지려면 PG 쪽 상태여야 하고, 횟수를 다 쓰면 PG 가 "복구" 되어 운영자 수동 재시도가 성공하는 흐름까지 볼 수 있다 (설계 5장 T20).
 
 ---
 
@@ -216,7 +218,7 @@ backend/src/main/java/com/staypoint/
 
 ## 데이터 모델
 
-스키마의 단일 출처는 [db/migration/V1__init_schema.sql](db/migration/V1__init_schema.sql). 정합성은 애플리케이션 코드만 믿지 않고 **DB 제약으로도** 보장한다.
+스키마의 단일 출처는 [db/migration](db/migration) (`V1__init_schema.sql`, T20 의 `V2__mockpg_cancel_fault.sql`). 정합성은 애플리케이션 코드만 믿지 않고 **DB 제약으로도** 보장한다.
 
 | 테이블 | 핵심 컬럼 | 정합성을 지키는 제약 |
 |---|---|---|
@@ -227,7 +229,7 @@ backend/src/main/java/com/staypoint/
 | `reservation_history` | from → to, 사유, 주체(actor), 시각 | 모든 상태 전이를 기록 |
 | `payment` | `pg_order_id, pg_tid, amount, canceled_amount, status, idempotency_key` | **UNIQUE(idempotency_key)** ← 결제 연타, **UNIQUE(pg_order_id)** ← 중복 통지, **부분 UNIQUE(reservation_id) WHERE status IN (READY, APPROVED)** ← 다른 키로 동시 결제, CHECK(canceled ≤ amount) |
 | `payment_cancel` | `cancel_amount, reason, status, cancel_key, attempt_count, last_error, next_retry_at` | **UNIQUE(cancel_key)** ← PG 취소 멱등. 이 테이블이 재시도 작업 큐(아웃박스) |
-| `mockpg_payment`, `mockpg_cancel` | 모의 PG 전용 | UNIQUE(order_id), UNIQUE(cancel_key) ← PG 쪽 멱등 |
+| `mockpg_payment`, `mockpg_cancel` | 모의 PG 전용. 데모용 `cancel_fail_remaining`·`cancel_fail_type` (결제별 남은 취소 실패 횟수, T20) | UNIQUE(order_id), UNIQUE(cancel_key) ← PG 쪽 멱등, CHECK(cancel_fail_remaining ≥ 0) |
 
 - **숙박일**: `stay_date` 는 체크인 ~ 체크아웃 **전날**. 1박 2일 = 재고 행 1개.
 - **금액**: Java `BigDecimal`, DB `NUMERIC(12,0)`, KRW 원 단위. 환불 금액만 계산이 있고 반올림 규칙(원 단위 내림)은 `RefundPolicy` 한 곳에 있다.
@@ -313,7 +315,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 
 개발 중 4회 연속 실행해 매번 같은 결과였다.
 
-**그 밖의 정합성 테스트** — 백엔드 테스트 159건, 전부 통과
+**그 밖의 정합성 테스트** — 백엔드 테스트 170건, 전부 통과 (T20 기준)
 
 | 테스트 | 검증 |
 |---|---|
@@ -326,6 +328,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 | **환불 금액 경계값 (S10)** | D = 8·7·6·3·2·1·0·−1 → 100·100·70·70·50·50·0·0%, 99,999원 × 70% = 69,999원(내림) — [RefundPolicyTest](backend/src/test/java/com/staypoint/cancellation/RefundPolicyTest.java) |
 | 재취소·동시 3회 취소 (S9) | 같은 응답, 재고·환불·이력 1회 |
 | 결제 취소 재시도 (S8) | 아래 출력 — 5회 후 MANUAL_REVIEW, 6번째 시도 없음 / 스케줄러 3개 동시 → 각 건 1회 시도 |
+| 환불 실패 데모 (T20) | PG 거절 선택 → 즉시 MANUAL_REVIEW → 수동 재시도 성공 / 장애 5회 → 파라미터 없는 스케줄러 재시도도 실패해 MANUAL_REVIEW/5 → 수동 재시도 성공 / 장애 1회 → 다음 재시도에서 환불 — [RefundFaultDemoTest](backend/src/test/java/com/staypoint/cancellation/RefundFaultDemoTest.java) |
 | 관리자 재고 축소 (S11) | 예약 수 미만이면 전체 거부, 동시 예약과 겹쳐도 booked ≤ total |
 
 ```

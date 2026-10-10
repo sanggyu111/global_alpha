@@ -9,14 +9,51 @@ import type { InventoryMismatch, PaymentCancelIssue } from "@/lib/types";
  * ② 재고 불일치 — booked_count 가 그 날짜를 쓰는 활성 예약 수와 다른 날짜
  */
 export default async function AdminIssuesPage() {
-  const [cancels, mismatches] = await Promise.all([
+  const [cancels, retrying, mismatches] = await Promise.all([
     api<PaymentCancelIssue[]>("/api/admin/payment-cancels?status=MANUAL_REVIEW"),
+    api<PaymentCancelIssue[]>("/api/admin/payment-cancels?status=PENDING"),
     api<InventoryMismatch[]>("/api/admin/inventory/mismatches"),
   ]);
 
   return (
     <>
       <h1>확인 필요</h1>
+
+      <h2>자동 환불 재시도 중 (PENDING)</h2>
+      <p className="muted">
+        PG 일시 장애로 환불이 실패해 1·2·4·8분 간격으로 자동 재시도 중인 건입니다. 5회째도 실패하면 아래 운영자 확인
+        목록으로 넘어갑니다. 이 화면은 새로고침해야 갱신됩니다.
+      </p>
+      {!retrying.ok ? (
+        <p className="error">{retrying.error.message}</p>
+      ) : retrying.data.length === 0 ? (
+        <p>없음</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>예약</th>
+              <th>사유</th>
+              <th>금액</th>
+              <th>시도</th>
+              <th>다음 시도</th>
+              <th>마지막 오류</th>
+            </tr>
+          </thead>
+          <tbody>
+            {retrying.data.map((c) => (
+              <tr key={c.id}>
+                <td>{c.reservationNo}</td>
+                <td>{c.reason === "COMPENSATION" ? "확정 실패 보상 취소" : "사용자 취소 환불"}</td>
+                <td>{won(c.cancelAmount)}</td>
+                <td>{c.attemptCount}회</td>
+                <td>{dateTime(c.nextRetryAt)}</td>
+                <td className="muted">{c.lastError ?? "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <h2>자동 환불 실패 (MANUAL_REVIEW)</h2>
       {!cancels.ok ? (

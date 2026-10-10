@@ -2,6 +2,7 @@ package com.staypoint.mockpg;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ import jakarta.validation.constraints.Size;
 public class MockPgController {
 
 	private static final long MAX_DELAY_MS = 30_000;
+	private static final int MAX_FAIL_TIMES = 10;
 
 	private final MockPgService service;
 	private final MockPgWebhookSender webhookSender;
@@ -89,10 +91,25 @@ public class MockPgController {
 		return PaymentResponse.from(service.find(orderId));
 	}
 
-	/** 전액·부분 취소. failRate 확률로 503 을 돌려주며 이때는 아무것도 기록하지 않는다 (재시도 대상). */
+	/**
+	 * 전액·부분 취소. failRate 확률로 503 을 돌려주며 이때는 아무것도 기록하지 않는다 (재시도 대상).
+	 * failTimes·failType(데모, T20): 이 결제의 취소를 지금부터 failTimes 번 실패시킨다. 이후 요청에 파라미터가
+	 * 없어도 남은 횟수만큼 실패하므로 재시도 스케줄러에도 같은 장애가 이어진다.
+	 */
 	@PostMapping("/{tid}/cancel")
 	public CancelResponse cancel(@PathVariable String tid, @Valid @RequestBody CancelRequest request,
-			@RequestParam(required = false) Double failRate) {
+			@RequestParam(required = false) Double failRate,
+			@RequestParam(required = false) Integer failTimes,
+			@RequestParam(defaultValue = "UNAVAILABLE") MockPgCancelFault failType) {
+		if (failTimes != null && (failTimes < 0 || failTimes > MAX_FAIL_TIMES)) {
+			throw new BusinessException(ErrorCode.VALIDATION_FAILED, "failTimes 는 0~" + MAX_FAIL_TIMES + " 사이여야 합니다.",
+					Map.of("failTimes", failTimes));
+		}
+		Optional<MockPgCancelFault> fault = service.takeCancelFault(tid, failTimes, failType);
+		if (fault.isPresent()) {
+			throw new BusinessException(fault.get() == MockPgCancelFault.REJECTED ? ErrorCode.PG_REJECTED
+					: ErrorCode.PG_UNAVAILABLE);
+		}
 		double rate = rate("failRate", failRate, properties.cancel().failRate());
 		if (ThreadLocalRandom.current().nextDouble() < rate) {
 			throw new BusinessException(ErrorCode.PG_UNAVAILABLE);

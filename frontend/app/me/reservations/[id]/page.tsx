@@ -90,6 +90,7 @@ export default async function MyReservationPage({ params }: { params: Promise<{ 
           <p className="muted">환불 규정: 7일 전까지 100% · 3일 전 70% · 1일 전 50% · 당일·노쇼 0%</p>
           <CancelButton
             reservationId={r.id}
+            hasRefund={(r.refundEstimate?.amount ?? 0) > 0}
             confirmMessage={
               r.refundEstimate
                 ? `예약을 취소하고 ${won(r.refundEstimate.amount)}을 환불받을까요?`
