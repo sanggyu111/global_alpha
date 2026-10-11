@@ -1,7 +1,15 @@
 import Link from "next/link";
 
 import { api } from "@/lib/api";
-import { CANCEL_REASON_LABEL, REFUND_PROBLEM_NOTICE, REFUND_STATUS_LABEL, STATUS_LABEL, dateTime, won } from "@/lib/format";
+import {
+  CANCEL_REASON_LABEL,
+  REFUND_POLICY_TEXT,
+  REFUND_PROBLEM_NOTICE,
+  REFUND_STATUS_LABEL,
+  STATUS_LABEL,
+  dateTime,
+  won,
+} from "@/lib/format";
 import type { ReservationDetail } from "@/lib/types";
 import { getUserId } from "@/lib/user";
 
@@ -98,7 +106,7 @@ export default async function MyReservationPage({ params }: { params: Promise<{ 
           ) : (
             <p>결제 전 예약이라 환불할 금액 없이 객실 선점만 해제됩니다.</p>
           )}
-          <p className="muted">환불 규정: 7일 전까지 100% · 3일 전 70% · 1일 전 50% · 당일·노쇼 0%</p>
+          <p className="muted">{REFUND_POLICY_TEXT}</p>
           <CancelButton
             reservationId={r.id}
             hasRefund={(r.refundEstimate?.amount ?? 0) > 0}
