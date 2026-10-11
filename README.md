@@ -99,13 +99,13 @@ npm run lint && npm run build # 타입 체크 포함
 | 시나리오 | 방법 |
 |---|---|
 | 정상 흐름 | `/` → 숙소 → 날짜·인원 검색 → 예약하기 → 이름·연락처 → 결제하기 → "예약 확정" |
-| 결제 거절 후 재결제 | 결제 화면 "실패율 100%" 로 결제 → 거절 → "0%" 로 다시 결제 → 확정 |
-| PG 타임아웃 | "응답 지연 5초" (백엔드 PG 읽기 타임아웃 3초) → 처리 중 → 웹훅/재조회로 확정 |
+| 결제 거절 후 재결제 | 결제 화면 "실패율 100%" 로 결제 → 거절 → "0%" 로 다시 결제 → 확정. 관리자 "PG 오류" 에 `PG_DECLINED` 1건 (T23) |
+| PG 타임아웃 | "응답 지연 5초" (백엔드 PG 읽기 타임아웃 3초) → 처리 중 → 웹훅/재조회로 확정. 관리자 "PG 오류" 에 `PG_TIMEOUT` 이 "결과 확인 중" 으로 보였다가 확정 후 "해결됨" (T23) |
 | 마지막 1실 경쟁 | "스테이포인트 제주 애월 / 독채 풀빌라" 는 재고 1실. 두 사용자 ID 로 같은 날짜 예약 → 한 명만 성공 |
 | 취소·환불 | 상단 "내 예약" → 상세 → 지금 취소 시 환불 예정액 확인 → 예약 취소 |
-| **환불 실패 → 운영자 확인** | 확정 예약 상세 → "데모: 모의 PG 환불 결과" 에서 고른 뒤 예약 취소 → 상세의 환불 상태가 **빨간색**(환불 진행 중 / 운영자 확인 중)으로 바뀐다 → 상단 "관리자" → "확인 필요". **PG 거절(4xx)** 은 즉시 "자동 환불 실패(MANUAL_REVIEW)" 에 노출 → "수동 재시도" → 상세에 "환불 완료". **PG 장애 1회** 는 "자동 재시도 중" 에 보였다가 약 1분 뒤 환불 완료. **PG 장애 5회** 는 1·2·4·8분 간격 재시도를 모두 실패해 약 15분 뒤 MANUAL_REVIEW → 수동 재시도로 환불 완료. 어느 경우든 실패한 회차는 "자동 환불 실패 기록" 에 발생 시각·오류 코드(`PG_5XX`·`PG_REJECTED` 등)·해결 여부와 함께 남고, 환불이 끝난 건의 기록만 삭제할 수 있다 (T22) |
+| **환불 실패 → 운영자 확인** | 확정 예약 상세 → "데모: 모의 PG 환불 결과" 에서 고른 뒤 예약 취소 → 상세의 환불 상태가 **빨간색**(환불 진행 중 / 운영자 확인 중)으로 바뀐다 → 상단 "관리자" → "확인 필요". **PG 거절(4xx)** 은 즉시 "자동 환불 실패(MANUAL_REVIEW)" 에 노출 → "수동 재시도" → 상세에 "환불 완료". **PG 장애 1회** 는 "자동 재시도 중" 에 보였다가 약 1분 뒤 환불 완료. **PG 장애 5회** 는 1·2·4·8분 간격 재시도를 모두 실패해 약 15분 뒤 MANUAL_REVIEW → 수동 재시도로 환불 완료. 어느 경우든 실패한 회차는 관리자 "PG 오류" 화면에 발생 시각·오류 코드(`PG_5XX`·`PG_REJECTED` 등)·해결 여부와 함께 남고, 환불이 끝난 건의 기록만 삭제할 수 있다 (T22) |
 | 선점 만료 | 결제하지 않고 10분 경과 → 스케줄러가 CANCELED(HOLD_EXPIRED) + 재고 복원 |
-| 관리자 | 상단 "관리자" → 예약 목록 필터·페이지 / 재고·요금 기간 수정 / 확인 필요(자동 환불 실패·실패 기록·재고 불일치) |
+| 관리자 | 상단 "관리자" → 예약 목록 필터·페이지 / 재고·요금 기간 수정 / 확인 필요(자동 환불 재시도 중·실패·재고 불일치) / PG 오류(결제 승인·환불 실패 기록, 기간·종류·오류 코드 필터) |
 
 - 사용자 식별은 인증 대신 상단 "사용자 ID" 입력값을 쿠키에 두고 백엔드에 `X-User-Id` 헤더로 보낸다 (과제 명시).
 - 모의 PG 장애는 결제 화면의 선택값 또는 설정으로 주입한다: `mockpg.approve.fail-rate`, `mockpg.approve.delay-ms`, `mockpg.cancel.fail-rate` ([application.yml](backend/src/main/resources/application.yml)). 예: `./gradlew bootRun --args='--mockpg.cancel.fail-rate=1.0'` 로 환불이 계속 실패하는 상황 → 5회 후 관리자 "확인 필요" 에 노출.
@@ -212,13 +212,13 @@ backend/src/main/java/com/staypoint/
 | `/reservations/new` | 예약자 정보 입력 |
 | `/reservations/[id]/pay` | 결제 (데모용 실패율·지연 선택) |
 | `/me/reservations`, `/me/reservations/[id]` | 내 예약 목록·상세, 환불 예정액, 취소 |
-| `/admin/reservations` · `/admin/inventory` · `/admin/issues` | 예약 목록(필터·페이지) · 재고·요금 · 확인 필요 |
+| `/admin/reservations` · `/admin/inventory` · `/admin/issues` · `/admin/pg-errors` | 예약 목록(필터·페이지) · 재고·요금 · 확인 필요 · PG 오류(T23) |
 
 ---
 
 ## 데이터 모델
 
-스키마의 단일 출처는 [db/migration](db/migration) (`V1__init_schema.sql`, T20 의 `V2__mockpg_cancel_fault.sql`, T22 의 `V3__payment_cancel_failure.sql`). 정합성은 애플리케이션 코드만 믿지 않고 **DB 제약으로도** 보장한다.
+스키마의 단일 출처는 [db/migration](db/migration) (`V1__init_schema.sql`, T20 의 `V2__mockpg_cancel_fault.sql`, T22 의 `V3__payment_cancel_failure.sql`, T23 의 `V4__payment_approve_failure.sql`). 정합성은 애플리케이션 코드만 믿지 않고 **DB 제약으로도** 보장한다.
 
 | 테이블 | 핵심 컬럼 | 정합성을 지키는 제약 |
 |---|---|---|
@@ -230,6 +230,7 @@ backend/src/main/java/com/staypoint/
 | `payment` | `pg_order_id, pg_tid, amount, canceled_amount, status, idempotency_key` | **UNIQUE(idempotency_key)** ← 결제 연타, **UNIQUE(pg_order_id)** ← 중복 통지, **부분 UNIQUE(reservation_id) WHERE status IN (READY, APPROVED)** ← 다른 키로 동시 결제, CHECK(canceled ≤ amount) |
 | `payment_cancel` | `cancel_amount, reason, status, cancel_key, attempt_count, last_error, next_retry_at` | **UNIQUE(cancel_key)** ← PG 취소 멱등. 이 테이블이 재시도 작업 큐(아웃박스) |
 | `payment_cancel_failure` | `payment_cancel_id, attempt_no, error_code, http_status, error_message, occurred_at` — PG 환불 시도 실패 1회 = 1행 (T22). 해결 여부는 저장하지 않고 `payment_cancel.status` 로 계산 | **UNIQUE(payment_cancel_id, attempt_no)**, CHECK(error_code 목록), INDEX(occurred_at) |
+| `payment_approve_failure` | `payment_id, error_code, http_status, error_message, occurred_at` — 결제 승인 요청 실패 1건 = 1행 (T23). PG 거절은 READY → FAILED 전이와 같은 트랜잭션에서만 기록(결제당 1회), 응답 없음·4xx 는 PG 호출 직후 기록. 해결 여부는 `payment.status` 로 계산 | CHECK(error_code 목록), INDEX(occurred_at) |
 | `mockpg_payment`, `mockpg_cancel` | 모의 PG 전용. 데모용 `cancel_fail_remaining`·`cancel_fail_type` (결제별 남은 취소 실패 횟수, T20) | UNIQUE(order_id), UNIQUE(cancel_key) ← PG 쪽 멱등, CHECK(cancel_fail_remaining ≥ 0) |
 
 - **숙박일**: `stay_date` 는 체크인 ~ 체크아웃 **전날**. 1박 2일 = 재고 행 1개.
@@ -375,7 +376,7 @@ sequenceDiagram
   - 승인 + 예약이 PENDING·만료 전·금액 일치 → `CONFIRMED` + 이력
   - 승인인데 확정할 수 없음(만료됨·이미 취소됨·금액 불일치) → **같은 트랜잭션에서 보상 취소 요청(`payment_cancel`, COMPENSATION)을 기록** → 커밋 후 PG 취소 시도. 실패하면 재시도 큐, 최종 실패는 운영자 확인 대상. "결제만 되고 예약은 없는" 돈이 조용히 남지 않는다.
   - 거절 → 결제 FAILED, 예약은 PENDING 유지 (선점 만료 전 재결제 가능)
-- **타임아웃·5xx 는 "실패" 가 아니라 "결과 모름"** 이다. PG 에서는 승인됐을 수 있으므로 FAILED 로 단정하지 않고 READY 로 두고 `PROCESSING` 을 응답한다. 웹훅 또는 **결제 상태 확정 스케줄러**(READY 가 1분 넘으면 PG 조회 API 로 확인, PG 에 기록이 없으면 FAILED)가 확정한다.
+- **타임아웃·5xx 는 "실패" 가 아니라 "결과 모름"** 이다. PG 에서는 승인됐을 수 있으므로 FAILED 로 단정하지 않고 READY 로 두고 `PROCESSING` 을 응답한다. 웹훅 또는 **결제 상태 확정 스케줄러**(READY 가 1분 넘으면 PG 조회 API 로 확인, PG 에 기록이 없으면 FAILED)가 확정한다. 이 경우도 관리자 "PG 오류" 에 오류 코드(`PG_TIMEOUT`·`PG_5XX` 등)와 함께 기록해 PG 쪽 장애를 따로 볼 수 있다 (T23).
 - 잠그기 전에 엔티티를 읽지 않는다: JPA 는 이미 읽어 둔 엔티티를 잠금 조회 결과로 덮어쓰지 않아, 동시에 온 두 통지가 둘 다 낡은 READY 를 보고 이중 반영할 수 있다. 잠금 전에는 값(예약 id)만 조회한다 (L032).
 
 **중복 · 재시도별 방어 키**
