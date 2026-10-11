@@ -685,6 +685,17 @@ const LOG = [
     cause: "피드백의 최우선 문제('URL 의 날짜·인원·지역이 반영되지 않고 기본값으로 돌아감', '연박 예약 흔적 없음') 는 재현되지 않음 — 쿠키 없는 요청으로 배포본에 같은 조건을 보내면 2박·3명, 3박·2명, 제주 3박·4명이 그대로 반영되고, 배포 DB 에 3박 2건·4박 1건 예약이 있음. 점검 도구 쪽 문제로 판단.",
     resolution: "T24 로 요청 2건 구현. 피드백 중 확인된 사실(배포 DB 의 실명·테스트 데이터, 확정 예약 0건, 예약 상세의 결제 상태 영문 표기, 연박 부분 겹침 동시성 테스트 없음, 시간대 경계 테스트 없음) 은 사용자에게 보고하고 처리 여부를 결정받기로 함.",
     refs: ["docs/02-design.md §8.6"],
+  },  {
+    id: "L063",
+    at: "2026-10-11",
+    task: "T26",
+    type: "change",
+    status: "resolved",
+    title: "재계산(recount) 동시성 테스트 추가 — README Q6 의 '보정이 동시 요청과 겹쳐도 어긋나지 않는다' 를 증명",
+    detail: "Q6 은 재계산이 재고 행을 잠근 뒤 세므로 동시 예약·취소와 겹쳐도 안전하다고 설명했지만, 이를 검증하는 테스트가 없었다. 사용자 승인으로 T26 진행.",
+    cause: "잠금 없이 세면 READ COMMITTED 에서 '재고는 바꿨지만 아직 커밋 전' 인 예약·취소가 COUNT 에 반영되지 않고, 재계산 UPDATE 가 그 트랜잭션 커밋 뒤 옛 값으로 덮어써 그 몫이 사라진다.",
+    resolution: "AdminRecountConcurrencyTest: booked_count 를 실제 4 → 10 으로 틀어 둔 뒤 재계산 1 + 새 예약 8 + 취소 4 를 동시에 실행, 끝난 뒤 booked = 활성 예약 수·불일치 0. 20회 통과. 테스트가 의미 있는지 보려고 재계산의 FOR UPDATE 를 임시로 빼고 돌리니 5회 중 2회 실패(기대 8 → 6: 예약 몫 유실, 9: 취소 몫 유실) — 원복 후 커밋. 운영 코드 변경 없음.",
+    refs: ["backend/src/test/java/com/staypoint/admin/AdminRecountConcurrencyTest.java", "README.md Q3·Q6"],
   },
 ];
 </script>
