@@ -176,6 +176,12 @@ const PROGRESS = {
       checks: { error: true, spec: true }, commits: ["207616f", "12f4364", "2807d62", "69a55cf", "9c75ddd", "86e625c"],
       note: "설계 8.7 (L062). backend build 통과 (테스트 183건 = 180 + 연박 부분 겹침 1 + 시간대 2), frontend lint·build 통과. 연박 부분 겹침 테스트 4회 실행 모두 예상 밖 오류(데드락) 0, 날짜별 booked = 예약 수 ≤ 2. 시간대 테스트는 고정 Clock 을 UTC 로 바꾸면 실패함을 확인(의미 있는 테스트). 로컬 실제 앱: 결제 상태 '승인' / 환불 전 취소 '승인' / 환불 완료 '취소(환불)됨', failRate 없이 결제 API 10회 → 10회 승인. GitHub 새 clone 에서 backend build(180건)·frontend npm ci·lint·build 통과 (T23 시점). 사용자 승인으로 main 병합·push.",
     },
+    {
+      id: "T26", phase: "dev", title: "재계산 동시성 테스트 — 재계산과 예약 생성·취소가 겹쳐도 booked_count = 활성 예약 수",
+      status: "done", branch: "test/T26-recount-concurrency",
+      checks: { error: true, spec: true }, commits: ["04a92ca", "84b3ca7", "a3d0d95"],
+      note: "설계 10장·12장 (L063). 테스트만 추가, 운영 코드 변경 없음. backend build 통과 (테스트 188건 = 183 + 재계산 동시성 5회 반복). booked_count 를 10(실제 4)으로 틀어 둔 뒤 재계산 1 + 새 예약 8 + 취소 4 동시 → 4번 실행(20회) 모두 booked = 활성 예약 8. 재계산의 FOR UPDATE 를 빼면 5회 중 2회 실패(6, 9) 확인 후 원복. 사용자 승인으로 main 병합·push.",
+    },
   ],
 
   // 과제 필수 요구사항 (PDF 2.3) — 우선순위 순
