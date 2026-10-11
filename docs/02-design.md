@@ -97,6 +97,7 @@ erDiagram
 | `reservation_history` | id, reservation_id, from_status, to_status, reason, actor, created_at | INDEX(reservation_id) | 모든 상태 전이 기록 |
 | `payment` | id, reservation_id, pg_order_id, pg_tid, amount, canceled_amount, status, idempotency_key, fail_reason, approved_at, created_at, updated_at | **UNIQUE(idempotency_key)**, **UNIQUE(pg_order_id)**, UNIQUE(pg_tid), **부분 UNIQUE(reservation_id) WHERE status IN ('READY','APPROVED')** | status: READY / APPROVED / FAILED / CANCELED |
 | `payment_cancel` | id, payment_id, cancel_amount, reason, status, cancel_key, attempt_count, last_error, next_retry_at, created_at, updated_at | **UNIQUE(cancel_key)**, INDEX(status, next_retry_at) | reason: USER_CANCEL / COMPENSATION, status: PENDING / SUCCEEDED / MANUAL_REVIEW |
+| `payment_cancel_failure` **(T22, V3)** | id, payment_cancel_id, attempt_no, error_code, http_status, error_message, occurred_at | FK payment_cancel, **UNIQUE(payment_cancel_id, attempt_no)**, INDEX(occurred_at) | PG 환불 시도 실패 1회 = 1행. 해결 여부는 저장하지 않고 `payment_cancel.status` 로 계산 |
 | `mockpg_payment` | id, order_id, tid, amount, canceled_amount, status, created_at | UNIQUE(order_id), UNIQUE(tid) | 모의 PG 전용 |
 | `mockpg_cancel` | id, cancel_key, tid, amount, created_at | UNIQUE(cancel_key) | 모의 PG 취소 멱등 |
 
@@ -365,6 +366,8 @@ HAVING i.booked_count <> COUNT(r.id);
 | PUT | `/api/admin/room-types/{id}/rates` `{from, to, price}` | 기간 요금 설정 | UI-4 |
 | GET | `/api/admin/payment-cancels?status=MANUAL_REVIEW` | 운영자 확인 대상 (`status=PENDING` → 자동 재시도 중, T20 화면) | UI-5, RTY-3 |
 | POST | `/api/admin/payment-cancels/{id}/retry` | 수동 재시도 | RTY-3 |
+| GET | `/api/admin/payment-cancel-failures?from&to` | **(T22)** 자동 환불 실패 기록 (발생일 기준, 양 끝 포함, 기본 최근 30일) | UI-5 |
+| DELETE | `/api/admin/payment-cancel-failures/{id}` | **(T22)** 기록 삭제 — 해결된(환불 완료) 건만, 미해결이면 409 `INVALID_STATE`, 없으면 404 | UI-5 |
 | GET | `/api/admin/inventory/mismatches` | 재고 정합 점검 | Q6 |
 | POST | `/api/admin/room-types/{id}/inventory/{date}/recount` | 재고 재계산 (booked_count ← 활성 예약 수) | Q6 |
 
@@ -421,6 +424,46 @@ HAVING i.booked_count <> COUNT(r.id);
 - 검토한 안: ① Route Group 으로 레이아웃 분리 + 사용자 화면에서 관리자 링크 제거 ② `/admin/login` 비밀번호 → httpOnly 쿠키, `middleware.ts` 가 `/admin/**` 검사 ③ 백엔드 `/api/admin/**` 가 관리자 토큰 헤더를 요구하고 Next 서버(`server-only`)만 토큰을 붙임.
 - 확인한 사실: ①② 만으로는 API 가 그대로 열려 있다 (배포본에서 인증 없이 `GET /api/admin/reservations` → 200, Swagger 문서에 관리자 API 8개 노출). 진짜 방어선은 ③.
 - **결정: 하지 않는다.** 과제가 "인증은 하지 않는다" 를 명시했고, 계정·역할 체계 없이 공용 비밀번호를 붙이는 것은 과제 범위 밖의 부분적인 장치라 지금 구조(같은 앱, `/admin` 경로, 인증 없음)를 유지. 실무라면 어떻게 하는지(관리자 앱·도메인 분리, SSO·2FA, 백엔드 역할 기반 권한 검사)와 현재 노출 범위는 README "미구현·타협" 에 적는다.
+
+### 8.4 운영 화면 개선 (T21·T22 — 사용자 피드백 2026-10-11)
+
+배포본에서 환불 실패 데모(T20)를 써 본 뒤 나온 요청. 결제·재고 흐름은 바꾸지 않는다.
+
+**T21 환불 상태 강조 · 재고 불일치 문구 정리**
+- 요청 ①: 취소 후 환불이 실패해도 예약 상세 화면의 변화가 작아 무슨 일이 일어났는지 알기 어렵다.
+  - 예약 상세 "취소" 카드에서 환불 상태가 `PENDING`(환불 진행 중)·`MANUAL_REVIEW`(운영자 확인 중)이면 **빨간 굵은 글씨**로 표시하고 한 줄 안내를 붙인다.
+    - PENDING: "PG 장애로 환불이 지연되고 있어 자동으로 다시 시도합니다."
+    - MANUAL_REVIEW: "자동 환불에 실패해 운영자가 확인 중입니다."
+  - `SUCCEEDED`·`NONE` 은 기본색 유지 — 정상 상태까지 강조하면 강조가 의미를 잃는다.
+- 요청 ③: 관리자 "재고 불일치" 안내 문구("정답은 예약 테이블…")의 뜻을 알기 어렵다.
+  - **기능은 유지한다.** README Q6(재고 불일치 감지·복구)의 구현이며, 정상이면 늘 비어 있는 것이 맞다.
+  - 문구를 쉬운 말로 바꾼다: "판매된 객실 수(booked_count)" 가 "실제 예약 건수" 와 다른 날짜, 실제 예약 건수가 기준, 원인 확인 후 [재계산].
+  - 객실 타입 ID 대신 숙소·객실 이름을 보여준다 → 불일치 조회 쿼리에 `room_type`·`property` JOIN 을 더해 이름을 함께 내려준다 (응답 필드 추가, 기존 필드 유지).
+
+**T22 자동 환불 실패 기록 (V3)**
+- 요청 ②: 자동 환불이 실패했던 기록이 남아야 한다. 기간으로 조회, 오류 코드 확인, 해결 여부 확인, 기록 삭제.
+- 문제: `payment_cancel` 에는 `last_error` 한 줄만 있어, 장애 후 재시도로 성공한 건은 목록에서 사라지고 실패 흔적도 없어진다.
+- **새 테이블 `payment_cancel_failure`** (3.2): PG 환불 시도가 실패할 때마다 1행.
+  - `PaymentCancelExecutor` 의 결과 반영 트랜잭션(4.6 ③)에서 `recordFailure` 와 **같은 트랜잭션**으로 INSERT → 상태 변경과 기록이 함께 커밋되거나 함께 롤백된다. PG 호출이 트랜잭션 밖인 구조는 그대로.
+  - `attempt_no` = 증가 후의 `attempt_count`. `UNIQUE(payment_cancel_id, attempt_no)` — 결과 반영은 `payment_cancel` 행 잠금 + PENDING 확인 뒤에만 일어나므로 정상 흐름에선 겹치지 않지만 DB 로도 보장.
+  - 수동 재시도는 `attempt_count` 를 이어 쓰므로 6회차, 7회차… 로 쌓인다.
+- **오류 코드** — PG 예외의 원인으로 분류해 저장 (`PgClient.PgError`):
+
+  | 코드 | 원인 | 이후 |
+  |---|---|---|
+  | `PG_5XX` | PG 가 5xx 응답 (일시 장애). `http_status` 에 실제 코드 | 자동 재시도 |
+  | `PG_TIMEOUT` | 읽기 타임아웃 (PG 에선 처리됐을 수도 있음 → cancel_key 로 재시도 안전) | 자동 재시도 |
+  | `PG_CONNECTION` | 연결 실패 · PG 주소 미정 | 자동 재시도 |
+  | `PG_REJECTED` | PG 가 4xx 로 거절. `http_status` 에 실제 코드 | 바로 운영자 확인 |
+  | `PG_UNKNOWN` | 그 밖의 통신 오류 | 자동 재시도 |
+
+- **해결 여부는 저장하지 않고 계산**: `payment_cancel.status` — SUCCEEDED = 해결됨, PENDING = 자동 재시도 중, MANUAL_REVIEW = 미해결. 같은 사실을 두 군데 저장하면 어긋날 수 있으므로 하나만 둔다. 운영자가 직접 "해결" 로 바꾸는 기능(PG 콘솔 수동 환불 기록)은 만들지 않는다 (README 타협 유지).
+- **삭제는 해결된 기록만**: 미해결 건의 기록을 지우면 "고객 돈이 아직 안 돌아갔다" 는 근거가 사라진다. 실패 기록 행만 지우고 `payment_cancel`(돈의 흐름) 은 남는다.
+  - `DELETE … WHERE id = ? AND EXISTS (… payment_cancel.status = 'SUCCEEDED')` 한 문장으로 확인과 삭제를 같이 한다. SUCCEEDED 는 끝 상태라 확인 뒤 상태가 바뀌는 경쟁이 없다.
+  - 0행이면 기록이 있는지 다시 봐서 없으면 404 `NOT_FOUND`, 있으면 409 `INVALID_STATE`.
+- **기간 조회**: `from`·`to` 는 발생일(Asia/Seoul) 기준 양 끝 포함, 기본 최근 30일, 최대 366일(`AdminRanges`). 최신순, 최대 500행.
+- 화면: 관리자 "확인 필요" 에 "자동 환불 실패 기록" 표 — 기간 입력(GET 폼 → `searchParams`), 열: 발생 시각 / 예약번호 / 사유 / 회차 / 오류 코드 / 메시지 / 해결 여부 / 삭제(해결된 건만 버튼). 서버 컴포넌트에서 `no-store` 조회, 삭제는 Server Action + `revalidatePath`.
+- 이 기능 이전에 생긴 실패는 회차별 기록이 없다 (근거가 `last_error` 한 줄뿐이라 마이그레이션으로 채우지 않음).
 
 ---
 
@@ -500,6 +543,8 @@ HAVING i.booked_count <> COUNT(r.id);
 | **T17** | 숙소 목록 날짜 검색 | 8.3 — `GET /api/properties/search`, 목록 화면 검색 폼·객실 요약·`no-store` | 지역·날짜 필터, 매진 숙소 제외, 정원 초과 제외, 검증 오류 테스트. lint·build, 로컬 화면 확인 | 왜 N+1 대신 한 쿼리인가, 왜 캐시를 끊었나 |
 | **T18** | 날짜 입력 제한 | 8.3 — `DateRangeFields` (목록·숙소 상세) | 오늘 이전·체크인 이후가 아닌 체크아웃 선택 불가, 체크인 변경 시 체크아웃 자동 조정 (브라우저 확인). lint·build | 왜 "오늘" 을 서버에서 넘기나, 화면 제한과 서버 검증의 관계 |
 | **T20** | 환불 실패 데모 | 5장 T20 — 모의 PG 결제별 취소 실패 횟수(V2), 취소 API 데모 파라미터, 취소 화면 선택, 관리자 재시도 중 목록 | 모의 PG: N회 실패 후 성공·422 거절. 취소 API: 거절 → MANUAL_REVIEW → 수동 재시도 성공, 장애 5회 → 재시도 소진 MANUAL_REVIEW. build·lint, 로컬 화면 확인 | 왜 확률이 아니라 횟수인가, 왜 장애 상태를 PG 쪽에 두나 |
+| **T21** | 환불 상태 강조 · 재고 불일치 문구 | 8.4 — 예약 상세 환불 상태 빨간색·안내, 불일치 문구·이름 표시 | 불일치 API 의 이름 필드 테스트, build·lint, 로컬 화면에서 PENDING·MANUAL_REVIEW 빨간색 확인 | 왜 정상 상태는 강조하지 않나, 불일치 기능이 왜 필요한가 |
+| **T22** | 자동 환불 실패 기록 | 8.4 — V3 `payment_cancel_failure`, 실패 시 기록, 조회·삭제 API, 관리자 화면 | 장애 N회 → N행·오류 코드, 거절 → `PG_REJECTED`·http 422, 기간 필터, 해결 건 삭제·미해결 409·없는 건 404 테스트. build·lint, 로컬 화면 확인 | 왜 해결 여부를 저장하지 않나, 왜 미해결은 못 지우나, 왜 같은 트랜잭션에 기록하나 |
 | ~~**T19**~~ | ~~관리자 / 사용자 화면 분리~~ | **취소** (8.3) — 과제 "인증 없음" 범위 유지, README 타협에 기록 | — | 왜 하지 않았나, 실무라면 어떻게 하나, 지금 무엇이 열려 있나 |
 
 - **시간 부족 시 축소 순서**: T14 → T13 → T12 일부 → T10 일부. T04·T07·T08 과 필수 테스트, README 는 축소 대상 아님.
