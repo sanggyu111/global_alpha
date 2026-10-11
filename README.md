@@ -307,17 +307,19 @@ UPDATE room_inventory
 
 - 재고 3실(2박이라 재고 행 2개를 동시에 차감)에 서로 다른 사용자 50명이 동시에 예약. `CountDownLatch` 로 50개 스레드를 붙잡아 두었다가 한 번에 출발시킨다.
 - 검증: 성공 정확히 3, 나머지 47은 모두 `SOLD_OUT`(그 외 오류 0), 두 날짜 모두 `booked_count == 3`, 예약 3건, 이력 3건.
+- **연박 부분 겹침 (T25)**: 날짜마다 재고 2실인 4일(d0~d3)에 서로 엇갈려 겹치는 구간(d0–d1, d1–d2, d2–d3, d0–d3, d1) 예약 40건을 동시에. 검증: 예상 밖 오류(데드락 포함) 0, 모든 날짜에서 `booked_count` = 그 날짜를 쓰는 예약 수 ≤ 2. 어느 구간이 이기는지는 실행마다 달라 성공 수는 고정하지 않는다.
 
-실제 실행 결과 (`./gradlew test`, 2026-10-09):
+실제 실행 결과 (`./gradlew test` — 첫 줄 2026-10-09, 둘째 줄 2026-10-11):
 
 ```
 [동시 예약] 재고=3, 요청=50 → 성공=3, SOLD_OUT=47, 기타 오류=0, booked_count(2026-10-19)=3, booked_count(2026-10-20)=3
 ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정확히_3명만_성공한다() PASSED (0.357s)
+[연박 부분 겹침] 날짜별 재고=2, 요청=40 → 성공=3, SOLD_OUT=37, 기타 오류=0, booked_count: 2026-10-21=0/2 2026-10-22=2/2 2026-10-23=2/2 2026-10-24=1/2
 ```
 
-개발 중 4회 연속 실행해 매번 같은 결과였다.
+개발 중 동시 예약은 4회, 연박 부분 겹침은 4회 연속 실행해 매번 오류 0·초과 0이었다.
 
-**그 밖의 정합성 테스트** — 백엔드 테스트 170건, 전부 통과 (T20 기준)
+**그 밖의 정합성 테스트** — 백엔드 테스트 183건, 전부 통과 (T25 기준)
 
 | 테스트 | 검증 |
 |---|---|
@@ -332,6 +334,8 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 | 결제 취소 재시도 (S8) | 아래 출력 — 5회 후 MANUAL_REVIEW, 6번째 시도 없음 / 스케줄러 3개 동시 → 각 건 1회 시도 |
 | 환불 실패 데모 (T20) | PG 거절 선택 → 즉시 MANUAL_REVIEW → 수동 재시도 성공 / 장애 5회 → 파라미터 없는 스케줄러 재시도도 실패해 MANUAL_REVIEW/5 → 수동 재시도 성공 / 장애 1회 → 다음 재시도에서 환불 — [RefundFaultDemoTest](backend/src/test/java/com/staypoint/cancellation/RefundFaultDemoTest.java) |
 | 관리자 재고 축소 (S11) | 예약 수 미만이면 전체 거부, 동시 예약과 겹쳐도 booked ≤ total |
+| **시간대 경계 (T25)** | JVM 기본 시간대를 UTC 로 두고 시각을 UTC 15:30(= 서울 다음 날 00:30)으로 고정 → 서울 기준 6일 전 취소는 70% (UTC 날짜로 세면 100% 가 됨). 운영 `Clock` 빈이 Asia/Seoul 인지도 확인 — [RefundTimezoneTest](backend/src/test/java/com/staypoint/cancellation/RefundTimezoneTest.java) |
+| PG 오류 기록 (T22·T23) | 환불 실패 회차별 기록·재시도 성공 후에도 유지, 거절은 FAILED 전이와 함께 1회(중복 웹훅에도), 타임아웃 → `PG_TIMEOUT`, 해결된 기록만 삭제 |
 
 ```
 [취소 재시도] PENDING/1+1m → PENDING/2+2m → PENDING/3+4m → PENDING/4+8m → MANUAL_REVIEW/5
@@ -339,13 +343,14 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 
 | 테스트 클래스 | 건수 | | 테스트 클래스 | 건수 |
 |---|---|---|---|---|
-| reservation.ReservationConcurrencyTest | 2 | | payment.PaymentFlowTest | 12 |
+| reservation.ReservationConcurrencyTest | 3 | | payment.PaymentFlowTest | 12 |
 | reservation.ReservationCreateApiTest | 13 | | payment.PaymentCompensationTest | 7 |
 | reservation.ReservationTest (상태 전이) | 16 | | payment.PaymentCancelRetryTest | 5 |
 | reservation.HoldExpiryTest | 6 | | payment.PaymentCancelRetryFailureTest | 4 |
-| cancellation.RefundPolicyTest | 10 | | payment.PaymentDomainTest | 6 |
-| cancellation.CancellationTest | 11 | | mockpg.MockPgApiTest / WebhookTest | 15 / 2 |
-| property.PropertyApiTest | 11 | | admin.AdminApiTest / InventoryConcurrencyTest | 12 / 3 |
+| cancellation.RefundPolicyTest | 10 | | payment.PaymentDomainTest / PgErrorTest | 6 / 2 |
+| cancellation.CancellationTest | 11 | | mockpg.MockPgApiTest / WebhookTest | 17 / 2 |
+| cancellation.RefundFaultDemoTest / RefundTimezoneTest | 4 / 2 | | admin.AdminApiTest / InventoryConcurrencyTest | 12 / 3 |
+| property.PropertyApiTest | 16 | | admin.PgErrorApiTest | 8 |
 | mypage.MyReservationApiTest | 5 | | schema.SchemaConstraintTest / SeedDataTest | 6 / 4 |
 | common.error.GlobalExceptionHandlerTest | 7 | | HealthEndpointTest / ApplicationTests | 1 / 1 |
 

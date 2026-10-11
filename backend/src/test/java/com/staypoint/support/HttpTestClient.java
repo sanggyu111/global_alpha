@@ -28,7 +28,11 @@ public class HttpTestClient {
 	}
 
 	public Response get(String path) {
-		return exchange(client.get().uri(path).retrieve());
+		return get(path, Map.of());
+	}
+
+	public Response get(String path, Map<String, String> headers) {
+		return exchange(client.get().uri(path).headers(h -> headers.forEach(h::add)).retrieve());
 	}
 
 	public Response delete(String path) {

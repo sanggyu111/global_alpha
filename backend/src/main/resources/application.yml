@@ -60,7 +60,8 @@ staypoint:
 # 모의 PG 장애 주입 (설계 5장). 승인·취소 API 의 ?failRate=&delayMs= 로 요청마다 덮어쓸 수 있다
 mockpg:
   approve:
-    fail-rate: 0.1
+    # 기본은 항상 승인 (T25) — 데모는 결제 화면에서 항상 승인 / 항상 거절을 골라 결과를 예측할 수 있게 한다
+    fail-rate: 0.0
     delay-ms: 300
   cancel:
     fail-rate: 0.0
