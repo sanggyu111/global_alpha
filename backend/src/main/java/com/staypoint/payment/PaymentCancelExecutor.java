@@ -29,16 +29,19 @@ public class PaymentCancelExecutor {
 	private static final Logger log = LoggerFactory.getLogger(PaymentCancelExecutor.class);
 
 	private final PaymentCancelRepository cancelRepository;
+	private final PaymentCancelFailureRepository failureRepository;
 	private final PaymentRepository paymentRepository;
 	private final PgClient pgClient;
 	private final TransactionTemplate tx;
 	private final StaypointProperties properties;
 	private final Clock clock;
 
-	public PaymentCancelExecutor(PaymentCancelRepository cancelRepository, PaymentRepository paymentRepository,
+	public PaymentCancelExecutor(PaymentCancelRepository cancelRepository,
+			PaymentCancelFailureRepository failureRepository, PaymentRepository paymentRepository,
 			PgClient pgClient, PlatformTransactionManager transactionManager, StaypointProperties properties,
 			Clock clock) {
 		this.cancelRepository = cancelRepository;
+		this.failureRepository = failureRepository;
 		this.paymentRepository = paymentRepository;
 		this.pgClient = pgClient;
 		this.tx = new TransactionTemplate(transactionManager);
@@ -68,17 +71,21 @@ public class PaymentCancelExecutor {
 		}
 
 		String error = null;
+		PgClient.PgError pgError = null;
 		boolean retryable = true;
 		try {
 			pgClient.cancel(target.tid(), target.cancelKey(), target.amount(), fault);
 		} catch (PgUnavailableException e) {
 			error = e.getMessage();
+			pgError = PgClient.PgError.of(e);
 		} catch (PgRejectedException e) {
 			error = e.getMessage();
+			pgError = PgClient.PgError.of(e);
 			retryable = false; // 다시 보내도 같은 거절 → 바로 운영자 확인 대상
 		}
 
 		String failure = error;
+		PgClient.PgError failureCode = pgError;
 		boolean canRetry = retryable;
 		tx.executeWithoutResult(status -> {
 			Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
@@ -94,6 +101,9 @@ public class PaymentCancelExecutor {
 				return;
 			}
 			cancel.recordFailure(failure, canRetry, properties.cancelRetry().maxAttempts(), now);
+			// 회차별 실패 기록 (T22): 상태 변경과 같은 트랜잭션 → 함께 커밋되거나 함께 롤백된다
+			failureRepository.save(
+					PaymentCancelFailure.of(cancelId, cancel.getAttemptCount(), failureCode, failure, now));
 			log.warn("PG 취소 실패: cancelId={}, 시도 {}회, 상태 {}, {}", cancelId, cancel.getAttemptCount(),
 					cancel.getStatus(), failure);
 		});

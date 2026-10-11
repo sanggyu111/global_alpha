@@ -1,6 +1,7 @@
 package com.staypoint.payment;
 
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -10,6 +11,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -58,6 +61,39 @@ public class PgClient {
 	public static class PgRejectedException extends RuntimeException {
 		public PgRejectedException(String message, Throwable cause) {
 			super(message, cause);
+		}
+	}
+
+	/** PG 실패 원인 분류 (설계 8.4 T22) — 환불 실패 기록의 오류 코드. */
+	public enum PgErrorCode {
+		PG_5XX, PG_TIMEOUT, PG_CONNECTION, PG_REJECTED, PG_UNKNOWN
+	}
+
+	/** httpStatus 는 PG 가 HTTP 응답을 돌려준 경우(5xx·4xx)에만 있다. */
+	public record PgError(PgErrorCode code, Integer httpStatus) {
+
+		/** 이 클래스가 던진 예외를 원인(cause)으로 분류한다. */
+		public static PgError of(RuntimeException e) {
+			Throwable cause = e.getCause();
+			if (cause instanceof HttpStatusCodeException http) {
+				PgErrorCode code = http.getStatusCode().is4xxClientError() ? PgErrorCode.PG_REJECTED : PgErrorCode.PG_5XX;
+				return new PgError(code, http.getStatusCode().value());
+			}
+			if (cause == null || cause instanceof ResourceAccessException) {
+				// 원인 없음 = PG 주소를 정하지 못함. 연결·읽기 타임아웃은 모두 SocketTimeoutException 으로 온다
+				return new PgError(causedBy(cause, SocketTimeoutException.class) ? PgErrorCode.PG_TIMEOUT
+						: PgErrorCode.PG_CONNECTION, null);
+			}
+			return new PgError(PgErrorCode.PG_UNKNOWN, null);
+		}
+
+		private static boolean causedBy(Throwable t, Class<? extends Throwable> type) {
+			for (Throwable c = t; c != null; c = c.getCause()) {
+				if (type.isInstance(c)) {
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 
