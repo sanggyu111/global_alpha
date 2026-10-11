@@ -652,6 +652,17 @@ const LOG = [
     cause: "두 Task 가 같은 파일(관리자 확인 필요 화면, progress.html 의 T21·T22 항목, README 데모 시나리오 줄)을 고쳐 main 에서 따로 분기하면 병합 충돌이 확실함.",
     resolution: "T22 를 feat/T21-refund-status-highlight 위에서 분기. 병합은 T21 → T22 순서로 하면 충돌 없음.",
     refs: ["docs/progress.html T22"],
+  },  {
+    id: "L060",
+    at: "2026-10-11",
+    task: "T23",
+    type: "change",
+    status: "resolved",
+    title: "PG 오류 화면 요청 (사용자) — 환불 실패 기록을 별도 화면으로, 결제 승인 실패도 함께 기록",
+    detail: "자동 환불 실패 기록을 확인 필요에서 분리해 관리자 메뉴에 'PG 오류' 화면 추가. PG 결제(승인) 실패도 같이 기록해 PG 문제를 한 곳에서 확인.",
+    cause: "결제 승인 실패는 payment.fail_reason 한 줄만 남고, 응답 없음(PROCESSING) 이력은 어디에도 남지 않음.",
+    resolution: "V4 payment_approve_failure. PG 거절은 READY→FAILED 전이와 같은 트랜잭션(결제당 1회), 응답 없음·4xx 는 PG 호출 직후 기록. 상태 확정 스케줄러의 조회 실패는 반복되므로 로그로만. 조회·삭제 API 를 /api/admin/pg-errors 로 통합(UNION ALL)하고 T22 API·확인 필요의 표 제거. 설계 8.5.",
+    refs: ["docs/02-design.md §8.5"],
   },
 ];
 </script>
