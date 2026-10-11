@@ -5,6 +5,8 @@ import { STATUS_LABEL, dateTime, won } from "@/lib/format";
 import type { ReservationDetail } from "@/lib/types";
 import { getUserId } from "@/lib/user";
 
+import { RefundPolicyTable } from "@/app/RefundPolicyTable";
+
 import { PayPanel } from "./PayPanel";
 
 export default async function PayPage({ params }: { params: Promise<{ id: string }> }) {
@@ -38,6 +40,8 @@ export default async function PayPage({ params }: { params: Promise<{ id: string
         <>
           <p className="muted">선점 만료: {dateTime(r.holdExpiresAt)} — 이 시각이 지나면 결제할 수 없습니다.</p>
           {r.payment?.status === "FAILED" && <p className="error">직전 결제 실패: {r.payment.failReason}</p>}
+          {/* 결제 전에 환불 규정을 보여준다 (T24) */}
+          <RefundPolicyTable checkIn={r.checkIn} totalAmount={r.totalAmount} />
           <PayPanel reservationId={r.id} />
         </>
       )}

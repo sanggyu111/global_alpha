@@ -74,11 +74,11 @@ export function PayPanel({ reservationId }: { reservationId: number }) {
       <fieldset>
         <legend>데모: 모의 PG 장애 주입</legend>
         <label>
-          실패율
+          결제 결과
+          {/* 데모는 결과를 예측할 수 있게 항상 승인 / 항상 거절만 둔다 (T24) — 값은 모의 PG 실패율 */}
           <select value={failRate} onChange={(e) => setFailRate(e.target.value)}>
-            <option value="0">0% (항상 승인)</option>
-            <option value="0.5">50%</option>
-            <option value="1">100% (항상 거절)</option>
+            <option value="0">항상 승인</option>
+            <option value="1">항상 거절</option>
           </select>
         </label>{" "}
         <label>
