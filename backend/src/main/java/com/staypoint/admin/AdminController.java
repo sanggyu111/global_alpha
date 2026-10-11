@@ -23,9 +23,9 @@ import com.staypoint.admin.AdminDtos.CalendarDay;
 import com.staypoint.admin.AdminDtos.InventoryMismatch;
 import com.staypoint.admin.AdminDtos.InventoryRequest;
 import com.staypoint.admin.AdminDtos.Page;
-import com.staypoint.admin.AdminDtos.PaymentCancelFailureRecord;
 import com.staypoint.admin.AdminDtos.PaymentCancelIssue;
 import com.staypoint.admin.AdminDtos.PaymentCancelRetryResult;
+import com.staypoint.admin.AdminDtos.PgErrorRecord;
 import com.staypoint.admin.AdminDtos.RateRequest;
 import com.staypoint.admin.AdminDtos.RecountResult;
 import com.staypoint.payment.PaymentCancel;
@@ -41,14 +41,17 @@ public class AdminController {
 	private final AdminReservationService reservationService;
 	private final AdminInventoryService inventoryService;
 	private final AdminIssueService issueService;
+	private final AdminPgErrorService pgErrorService;
 	private final PaymentCancelRetryService cancelRetryService;
 	private final Clock clock;
 
 	public AdminController(AdminReservationService reservationService, AdminInventoryService inventoryService,
-			AdminIssueService issueService, PaymentCancelRetryService cancelRetryService, Clock clock) {
+			AdminIssueService issueService, AdminPgErrorService pgErrorService,
+			PaymentCancelRetryService cancelRetryService, Clock clock) {
 		this.reservationService = reservationService;
 		this.inventoryService = inventoryService;
 		this.issueService = issueService;
+		this.pgErrorService = pgErrorService;
 		this.cancelRetryService = cancelRetryService;
 		this.clock = clock;
 	}
@@ -99,21 +102,26 @@ public class AdminController {
 				cancel.getLastError());
 	}
 
-	/** 자동 환불 실패 기록 (T22). 발생일 기준, 기간을 안 주면 최근 30일(오늘 포함). */
-	@GetMapping("/payment-cancel-failures")
-	public List<PaymentCancelFailureRecord> paymentCancelFailures(
+	/**
+	 * PG 오류 기록 (T23) — 결제 승인 실패 + 환불 실패. 발생일 기준, 기간을 안 주면 최근 30일(오늘 포함).
+	 * kind = APPROVE | CANCEL, code = 오류 코드 (없으면 전체).
+	 */
+	@GetMapping("/pg-errors")
+	public List<PgErrorRecord> pgErrors(
 			@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate from,
-			@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate to) {
+			@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate to,
+			@RequestParam(required = false) String kind,
+			@RequestParam(required = false) String code) {
 		LocalDate end = to != null ? to : LocalDate.now(clock);
 		LocalDate start = from != null ? from : end.minusDays(29);
-		return issueService.paymentCancelFailures(start, end);
+		return pgErrorService.search(start, end, kind, code);
 	}
 
-	/** 실패 기록 삭제 (T22). 환불이 끝난 건만 — 미해결이면 409 INVALID_STATE, 없으면 404. */
-	@DeleteMapping("/payment-cancel-failures/{id}")
+	/** PG 오류 기록 삭제 (T23). 결과가 확정된 건만 — 미해결이면 409 INVALID_STATE, 없으면 404. */
+	@DeleteMapping("/pg-errors/{kind}/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void deletePaymentCancelFailure(@PathVariable Long id) {
-		issueService.deletePaymentCancelFailure(id);
+	public void deletePgError(@PathVariable String kind, @PathVariable Long id) {
+		pgErrorService.delete(kind, id);
 	}
 
 	/** 재고 불일치 감지. 기간을 안 주면 오늘부터 1년. */
