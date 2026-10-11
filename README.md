@@ -319,7 +319,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 
 개발 중 동시 예약은 4회, 연박 부분 겹침은 4회 연속 실행해 매번 오류 0·초과 0이었다.
 
-**그 밖의 정합성 테스트** — 백엔드 테스트 183건, 전부 통과 (T25 기준)
+**그 밖의 정합성 테스트** — 백엔드 테스트 188건, 전부 통과 (T26 기준)
 
 | 테스트 | 검증 |
 |---|---|
@@ -334,6 +334,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 | 결제 취소 재시도 (S8) | 아래 출력 — 5회 후 MANUAL_REVIEW, 6번째 시도 없음 / 스케줄러 3개 동시 → 각 건 1회 시도 |
 | 환불 실패 데모 (T20) | PG 거절 선택 → 즉시 MANUAL_REVIEW → 수동 재시도 성공 / 장애 5회 → 파라미터 없는 스케줄러 재시도도 실패해 MANUAL_REVIEW/5 → 수동 재시도 성공 / 장애 1회 → 다음 재시도에서 환불 — [RefundFaultDemoTest](backend/src/test/java/com/staypoint/cancellation/RefundFaultDemoTest.java) |
 | 관리자 재고 축소 (S11) | 예약 수 미만이면 전체 거부, 동시 예약과 겹쳐도 booked ≤ total |
+| **재계산 동시성 (T26)** | `booked_count` 를 실제(4)보다 크게(10) 틀어 둔 뒤 재계산 1건 + 새 예약 8건 + 기존 예약 취소 4건을 동시에 → 끝난 뒤 `booked_count` = 활성 예약 수(8), 불일치 0. 5회 반복을 4번 돌려 20회 모두 통과. **재계산의 `FOR UPDATE` 를 빼고 돌리면 5회 중 2회 실패**(8 기대 → 6: 커밋 전 예약 몫을 덮어씀, 9: 커밋 전 취소 몫을 덮어씀) — 테스트가 실제로 이 경합을 잡는다는 확인 — [AdminRecountConcurrencyTest](backend/src/test/java/com/staypoint/admin/AdminRecountConcurrencyTest.java) |
 | **시간대 경계 (T25)** | JVM 기본 시간대를 UTC 로 두고 시각을 UTC 15:30(= 서울 다음 날 00:30)으로 고정 → 서울 기준 6일 전 취소는 70% (UTC 날짜로 세면 100% 가 됨). 운영 `Clock` 빈이 Asia/Seoul 인지도 확인 — [RefundTimezoneTest](backend/src/test/java/com/staypoint/cancellation/RefundTimezoneTest.java) |
 | PG 오류 기록 (T22·T23) | 환불 실패 회차별 기록·재시도 성공 후에도 유지, 거절은 FAILED 전이와 함께 1회(중복 웹훅에도), 타임아웃 → `PG_TIMEOUT`, 해결된 기록만 삭제 |
 
@@ -349,7 +350,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 | reservation.HoldExpiryTest | 6 | | payment.PaymentCancelRetryFailureTest | 4 |
 | cancellation.RefundPolicyTest | 10 | | payment.PaymentDomainTest / PgErrorTest | 6 / 2 |
 | cancellation.CancellationTest | 11 | | mockpg.MockPgApiTest / WebhookTest | 17 / 2 |
-| cancellation.RefundFaultDemoTest / RefundTimezoneTest | 4 / 2 | | admin.AdminApiTest / InventoryConcurrencyTest | 12 / 3 |
+| cancellation.RefundFaultDemoTest / RefundTimezoneTest | 4 / 2 | | admin.AdminApiTest / InventoryConcurrencyTest / RecountConcurrencyTest | 12 / 3 / 5 |
 | property.PropertyApiTest | 16 | | admin.PgErrorApiTest | 8 |
 | mypage.MyReservationApiTest | 5 | | schema.SchemaConstraintTest / SeedDataTest | 6 / 4 |
 | common.error.GlobalExceptionHandlerTest | 7 | | HealthEndpointTest / ApplicationTests | 1 / 1 |
@@ -454,7 +455,7 @@ HAVING i.booked_count <> COUNT(r.id);
 
 **복구** — `POST /api/admin/room-types/{id}/inventory/{date}/recount` (화면의 "재계산" 버튼)
 
-- 해당 날짜 재고 행을 `FOR UPDATE` 로 잠근 뒤 활성 예약 수를 세어 `booked_count` 를 맞춘다. 예약 생성·만료·취소도 같은 행을 잠그고 바꾸므로, 진행 중인 트랜잭션은 커밋된 뒤에 세어지거나(잠금 대기) 이 보정 뒤에 자기 몫을 더한다 → 보정이 동시 요청과 겹쳐도 어긋나지 않는다.
+- 해당 날짜 재고 행을 `FOR UPDATE` 로 잠근 뒤 활성 예약 수를 세어 `booked_count` 를 맞춘다. 예약 생성·만료·취소도 같은 행을 잠그고 바꾸므로, 진행 중인 트랜잭션은 커밋된 뒤에 세어지거나(잠금 대기) 이 보정 뒤에 자기 몫을 더한다 → 보정이 동시 요청과 겹쳐도 어긋나지 않는다. 잠금 없이 세면 "재고는 바꿨지만 아직 커밋 전" 인 예약·취소를 놓친 채 옛 값으로 덮어써 그 몫이 사라진다 — Q3 의 재계산 동시성 테스트(T26)로 확인했다.
 - 활성 예약 수가 재고보다 많으면(예약 자체가 초과) 보정을 거부한다 — 재계산으로 해결할 문제가 아니라 운영자가 재고를 늘리거나 예약을 정리해야 한다.
 - **자동 보정은 하지 않는다.** 원인을 모른 채 덮어쓰면 불일치를 만든 버그를 숨기게 된다. 감지 → 원인 확인 → 재계산 순서.
 
