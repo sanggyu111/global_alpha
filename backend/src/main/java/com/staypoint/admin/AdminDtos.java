@@ -33,10 +33,16 @@ public final class AdminDtos {
 			BigDecimal price) {
 	}
 
-	public record InventoryRequest(@NotNull LocalDate from, @NotNull LocalDate to, @NotNull @Min(0) Integer totalCount) {
+	public record InventoryRequest(
+			@NotNull(message = "시작 날짜를 입력해 주세요.") LocalDate from,
+			@NotNull(message = "끝 날짜를 입력해 주세요.") LocalDate to,
+			@NotNull(message = "재고 수를 입력해 주세요.") @Min(value = 0, message = "재고 수는 0 이상이어야 합니다.") Integer totalCount) {
 	}
 
-	public record RateRequest(@NotNull LocalDate from, @NotNull LocalDate to, @NotNull @DecimalMin("0") BigDecimal price) {
+	public record RateRequest(
+			@NotNull(message = "시작 날짜를 입력해 주세요.") LocalDate from,
+			@NotNull(message = "끝 날짜를 입력해 주세요.") LocalDate to,
+			@NotNull(message = "요금을 입력해 주세요.") @DecimalMin(value = "0", message = "요금은 0 이상이어야 합니다.") BigDecimal price) {
 	}
 
 	public record PaymentCancelIssue(Long id, String reason, String status, BigDecimal cancelAmount, int attemptCount,
