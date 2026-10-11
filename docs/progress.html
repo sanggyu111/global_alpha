@@ -14,8 +14,8 @@
 -->
 <script>
 const PROGRESS = {
-  updatedAt: "2026-10-10",
-  currentTask: "T16",
+  updatedAt: "2026-10-11",
+  currentTask: "T21",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -145,6 +145,18 @@ const PROGRESS = {
       status: "done", branch: "feat/T20-refund-fault-demo",
       checks: { error: true, spec: true }, commits: ["8ab8f22", "e41b8b5", "8166d26", "9f3734b", "40e1ecc"],
       note: "backend build 통과 (테스트 170건 = 164 + 모의 PG 2 + 환불 실패 데모 4), frontend lint·build 통과. 로컬 실제 앱(API): 정상 → SUCCEEDED, PG 거절 → 즉시 MANUAL_REVIEW, 장애 1회·5회 → PENDING. 실제 Chrome 7항목 통과: 결제 전 예약엔 선택 없음, 확정 예약에 4개 선택, PG 거절 → 상세 '운영자 확인 중' → 관리자 확인 필요 노출 → 수동 재시도 → 목록에서 사라지고 '환불 완료'. 실제 스케줄러 실시간 관찰 (L057 환경 정리 후): 장애 1회 → 19:34 취소, 19:35 SUCCEEDED/2. 장애 5회 → PENDING/1(19:34) → 2(19:35) → 3(19:37) → 4(19:41) → MANUAL_REVIEW/5(19:49), 6번째 자동 시도 없음, 관리자 수동 재시도 → SUCCEEDED, 결제·PG 모두 CANCELED. 사용자 승인으로 main 병합·push.",
+    },
+    {
+      id: "T21", phase: "dev", title: "환불 상태 강조 · 재고 불일치 문구 정리",
+      status: "todo", branch: "feat/T21-refund-status-highlight",
+      checks: { error: null, spec: null }, commits: [],
+      note: "설계 8.4 (사용자 피드백 2026-10-11, L058).",
+    },
+    {
+      id: "T22", phase: "dev", title: "자동 환불 실패 기록 — V3 payment_cancel_failure, 기간 조회 · 오류 코드 · 해결 여부 · 삭제",
+      status: "todo", branch: "feat/T22-refund-failure-log",
+      checks: { error: null, spec: null }, commits: [],
+      note: "설계 8.4 (사용자 피드백 2026-10-11, L058).",
     },
   ],
 
