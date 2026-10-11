@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-11",
-  currentTask: "T16",
+  currentTask: "T23",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -157,6 +157,12 @@ const PROGRESS = {
       status: "done", branch: "feat/T22-refund-failure-log",
       checks: { error: true, spec: true }, commits: ["6c92d4c", "d22ebd0", "60ff032", "a64b237", "7c51f5d"],
       note: "설계 8.4 (L058). T21 브랜치에서 분기 (L059). backend build 통과 (테스트 177건 = 170 + 실패 기록 5 + 오류 코드 분류 2), frontend lint·build 통과. 로컬 실제 앱: V3 적용, 장애 1회 → PG_5XX/HTTP 503 1회차 기록(자동 재시도 중) → 실제 스케줄러가 약 1분 뒤 환불 성공 → 같은 기록이 '해결됨'으로 남음. PG 거절 → PG_REJECTED/HTTP 422 '미해결' 빨간색, 삭제 버튼 없음. 지난 기간 조회 → 없음. 삭제: 미해결 409, 해결됨 204, 다시 404, payment_cancel 은 유지. 삭제 버튼 클릭은 API 로 대신 확인. 사용자 승인으로 main 병합·push.",
+    },
+    {
+      id: "T23", phase: "dev", title: "PG 오류 화면 — 결제 승인 실패(V4) + 환불 실패 통합 기록 · 관리자 메뉴 추가",
+      status: "in-progress", branch: "feat/T23-pg-error-page",
+      checks: { error: null, spec: null }, commits: [],
+      note: "설계 8.5 (사용자 피드백 2026-10-11, L060).",
     },
   ],
 

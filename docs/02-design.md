@@ -98,6 +98,7 @@ erDiagram
 | `payment` | id, reservation_id, pg_order_id, pg_tid, amount, canceled_amount, status, idempotency_key, fail_reason, approved_at, created_at, updated_at | **UNIQUE(idempotency_key)**, **UNIQUE(pg_order_id)**, UNIQUE(pg_tid), **부분 UNIQUE(reservation_id) WHERE status IN ('READY','APPROVED')** | status: READY / APPROVED / FAILED / CANCELED |
 | `payment_cancel` | id, payment_id, cancel_amount, reason, status, cancel_key, attempt_count, last_error, next_retry_at, created_at, updated_at | **UNIQUE(cancel_key)**, INDEX(status, next_retry_at) | reason: USER_CANCEL / COMPENSATION, status: PENDING / SUCCEEDED / MANUAL_REVIEW |
 | `payment_cancel_failure` **(T22, V3)** | id, payment_cancel_id, attempt_no, error_code, http_status, error_message, occurred_at | FK payment_cancel, **UNIQUE(payment_cancel_id, attempt_no)**, INDEX(occurred_at) | PG 환불 시도 실패 1회 = 1행. 해결 여부는 저장하지 않고 `payment_cancel.status` 로 계산 |
+| `payment_approve_failure` **(T23, V4)** | id, payment_id, error_code, http_status, error_message, occurred_at | FK payment, INDEX(occurred_at) | 결제 승인 요청 실패 1건 = 1행 (PG 거절·응답 없음·4xx). 해결 여부는 `payment.status` 로 계산 |
 | `mockpg_payment` | id, order_id, tid, amount, canceled_amount, status, created_at | UNIQUE(order_id), UNIQUE(tid) | 모의 PG 전용 |
 | `mockpg_cancel` | id, cancel_key, tid, amount, created_at | UNIQUE(cancel_key) | 모의 PG 취소 멱등 |
 
@@ -366,8 +367,10 @@ HAVING i.booked_count <> COUNT(r.id);
 | PUT | `/api/admin/room-types/{id}/rates` `{from, to, price}` | 기간 요금 설정 | UI-4 |
 | GET | `/api/admin/payment-cancels?status=MANUAL_REVIEW` | 운영자 확인 대상 (`status=PENDING` → 자동 재시도 중, T20 화면) | UI-5, RTY-3 |
 | POST | `/api/admin/payment-cancels/{id}/retry` | 수동 재시도 | RTY-3 |
-| GET | `/api/admin/payment-cancel-failures?from&to` | **(T22)** 자동 환불 실패 기록 (발생일 기준, 양 끝 포함, 기본 최근 30일) | UI-5 |
-| DELETE | `/api/admin/payment-cancel-failures/{id}` | **(T22)** 기록 삭제 — 해결된(환불 완료) 건만, 미해결이면 409 `INVALID_STATE`, 없으면 404 | UI-5 |
+| GET | ~~`/api/admin/payment-cancel-failures?from&to`~~ → T23 `pg-errors` 로 대체 | ~~(T22)~~ 자동 환불 실패 기록 (발생일 기준, 양 끝 포함, 기본 최근 30일) | UI-5 |
+| DELETE | ~~`/api/admin/payment-cancel-failures/{id}`~~ → T23 `pg-errors` 로 대체 | ~~(T22)~~ 기록 삭제 — 해결된(환불 완료) 건만, 미해결이면 409 `INVALID_STATE`, 없으면 404 | UI-5 |
+| GET | `/api/admin/pg-errors?from&to&kind&code` | **(T23)** PG 오류 기록 — 결제 승인 실패 + 환불 실패 통합, 발생일 기준(기본 최근 30일), kind=APPROVE/CANCEL | UI-5 |
+| DELETE | `/api/admin/pg-errors/{kind}/{id}` | **(T23)** 기록 삭제 — 해결된(결과 확정) 건만, 미해결 409, 없으면 404 | UI-5 |
 | GET | `/api/admin/inventory/mismatches` | 재고 정합 점검 | Q6 |
 | POST | `/api/admin/room-types/{id}/inventory/{date}/recount` | 재고 재계산 (booked_count ← 활성 예약 수) | Q6 |
 
@@ -464,6 +467,29 @@ HAVING i.booked_count <> COUNT(r.id);
 - **기간 조회**: `from`·`to` 는 발생일(Asia/Seoul) 기준 양 끝 포함, 기본 최근 30일, 최대 366일(`AdminRanges`). 최신순, 최대 500행.
 - 화면: 관리자 "확인 필요" 에 "자동 환불 실패 기록" 표 — 기간 입력(GET 폼 → `searchParams`), 열: 발생 시각 / 예약번호 / 사유 / 회차 / 오류 코드 / 메시지 / 해결 여부 / 삭제(해결된 건만 버튼). 서버 컴포넌트에서 `no-store` 조회, 삭제는 Server Action + `revalidatePath`.
 - 이 기능 이전에 생긴 실패는 회차별 기록이 없다 (근거가 `last_error` 한 줄뿐이라 마이그레이션으로 채우지 않음).
+- **[T23 변경]** 화면은 "PG 오류" 페이지로 옮기고, 조회·삭제 API 는 결제 승인 실패와 합친 `/api/admin/pg-errors` 로 바꾼다 (8.5).
+
+### 8.5 PG 오류 화면 (T23 — 사용자 피드백 2026-10-11)
+
+- 요청: 자동 환불 실패 기록을 별도 화면으로 옮기고, **PG 결제(승인) 실패**도 함께 기록해 "PG 오류 문제를 확인하는 화면" 으로 만든다. 관리자 메뉴 "예약 목록 · 재고·요금 · 확인 필요" 옆에 "PG 오류" 추가.
+- **새 테이블 `payment_approve_failure`** (V4): 결제 승인 요청 1건의 실패 = 1행. 컬럼: payment_id(FK), error_code, http_status, error_message, occurred_at.
+  - **PG 거절** (`PG_DECLINED`, http 200 — PG 가 정상 응답으로 승인을 거절): `PaymentProcessor.applyResult` 에서 결제를 FAILED 로 바꾸는 **같은 트랜잭션**에서 기록. READY → FAILED 전이는 결제당 한 번뿐이라 동기 응답·웹훅·상태 확정 스케줄러 중 누가 반영하든 **한 번만** 남는다. 메시지는 실패 사유("PG 승인 거절" / 상태 확정 스케줄러의 "PG 승인 기록 없음") 를 그대로 쓴다.
+  - **응답 없음·5xx** (`PG_5XX`·`PG_TIMEOUT`·`PG_CONNECTION`·`PG_UNKNOWN`, 4.4 의 PROCESSING): 결제 상태를 바꾸지 않는 경우라 `PaymentService.pay` 가 PG 호출 직후 기록만 짧은 트랜잭션으로 남긴다 (PG 호출은 여전히 트랜잭션 밖).
+  - **PG 4xx** (`PG_REJECTED`): 같은 위치에서 기록 후 기존대로 예외를 전달.
+  - 기록하지 않는 것: 상태 확정 스케줄러의 PG 조회(`find`) 실패 — 10초마다 같은 결제를 다시 조회하므로 행이 계속 늘어난다. 로그(WARN) 로만 남긴다.
+  - `UNIQUE` 는 두지 않는다: 같은 결제에 응답 없음 기록과 나중의 거절 기록이 둘 다 생길 수 있고, 거절은 위처럼 전이 1회에 묶여 중복이 생기지 않는다.
+- **조회 API 통합** `GET /api/admin/pg-errors?from&to&kind&code`: 두 테이블을 `UNION ALL` 로 합쳐 발생 시각 최신순, 최대 500행. `kind` = `APPROVE`(결제 승인) / `CANCEL`(환불), `code` = 오류 코드. 각 행에 현재 상태와 해결 여부를 함께 계산해 내려준다.
+
+  | 종류 | 현재 상태 (계산) | 해결됨 (삭제 가능) |
+  |---|---|---|
+  | 환불 (`CANCEL`) | `payment_cancel.status` | SUCCEEDED (환불 완료) |
+  | 결제 승인 (`APPROVE`) | `payment.status` — READY 결과 확인 중 · APPROVED 승인됨(응답만 늦음) · FAILED 결제 실패 확정 · CANCELED 승인 후 취소됨 | READY 가 아닐 때 (결과 확정) |
+
+  - 결제 승인 실패는 고객 돈이 묶이지 않으므로(승인 안 됨 또는 확정됨) "확인 중(READY)" 만 미해결로 본다.
+- **삭제** `DELETE /api/admin/pg-errors/{kind}/{id}`: 해결된 기록만. 확인과 삭제를 한 문장(`DELETE … WHERE … AND EXISTS(상태 조건)`)으로, 미해결 409 `INVALID_STATE`, 없으면 404. 두 테이블의 id 가 겹칠 수 있어 경로에 kind 를 둔다.
+- 기존 T22 의 `/api/admin/payment-cancel-failures` 조회·삭제 API 와 "확인 필요" 화면의 실패 기록 표는 제거한다 (같은 기능이 두 곳에 있지 않게). "확인 필요" 는 지금 조치가 필요한 것(재시도 중·운영자 확인·재고 불일치) 만 남긴다.
+- 화면 `/admin/pg-errors`: 상단에 오류 코드별 건수 요약, 필터(발생일 기간 · 종류 · 오류 코드) 는 GET 폼 → `searchParams`, 표 열: 발생 시각 / 종류 / 예약 / 회차(환불만) / 오류 코드·HTTP / 메시지 / 현재 상태·해결 여부 / 삭제. 서버 컴포넌트 `no-store`, 삭제는 Server Action.
+- 이 기능 이전의 결제 승인 실패는 기록이 없다 (FAILED 결제의 `fail_reason` 으로 일부 알 수 있지만 응답 없음 이력은 남아 있지 않아 채우지 않음).
 
 ---
 
@@ -545,6 +571,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | **T20** | 환불 실패 데모 | 5장 T20 — 모의 PG 결제별 취소 실패 횟수(V2), 취소 API 데모 파라미터, 취소 화면 선택, 관리자 재시도 중 목록 | 모의 PG: N회 실패 후 성공·422 거절. 취소 API: 거절 → MANUAL_REVIEW → 수동 재시도 성공, 장애 5회 → 재시도 소진 MANUAL_REVIEW. build·lint, 로컬 화면 확인 | 왜 확률이 아니라 횟수인가, 왜 장애 상태를 PG 쪽에 두나 |
 | **T21** | 환불 상태 강조 · 재고 불일치 문구 | 8.4 — 예약 상세 환불 상태 빨간색·안내, 불일치 문구·이름 표시 | 불일치 API 의 이름 필드 테스트, build·lint, 로컬 화면에서 PENDING·MANUAL_REVIEW 빨간색 확인 | 왜 정상 상태는 강조하지 않나, 불일치 기능이 왜 필요한가 |
 | **T22** | 자동 환불 실패 기록 | 8.4 — V3 `payment_cancel_failure`, 실패 시 기록, 조회·삭제 API, 관리자 화면 | 장애 N회 → N행·오류 코드, 거절 → `PG_REJECTED`·http 422, 기간 필터, 해결 건 삭제·미해결 409·없는 건 404 테스트. build·lint, 로컬 화면 확인 | 왜 해결 여부를 저장하지 않나, 왜 미해결은 못 지우나, 왜 같은 트랜잭션에 기록하나 |
+| **T23** | PG 오류 화면 | 8.5 — V4 `payment_approve_failure`, 승인 실패 기록(거절은 FAILED 전이와 같은 트랜잭션), `/api/admin/pg-errors` 통합 조회·삭제, `/admin/pg-errors` 화면, 확인 필요에서 실패 기록 표 제거 | 거절 1건만 기록(웹훅 중복에도), 응답 없음 → PG_TIMEOUT, 통합 조회·kind·code·기간 필터, 삭제 규칙(승인 READY 409·확정 204, 환불 미해결 409) 테스트. build·lint, 로컬 화면 확인 | 왜 거절은 상태 전이와 같은 트랜잭션인가, 왜 조회 실패는 기록 안 하나, 왜 UNION 인가 |
 | ~~**T19**~~ | ~~관리자 / 사용자 화면 분리~~ | **취소** (8.3) — 과제 "인증 없음" 범위 유지, README 타협에 기록 | — | 왜 하지 않았나, 실무라면 어떻게 하나, 지금 무엇이 열려 있나 |
 
 - **시간 부족 시 축소 순서**: T14 → T13 → T12 일부 → T10 일부. T04·T07·T08 과 필수 테스트, README 는 축소 대상 아님.
