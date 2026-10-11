@@ -45,12 +45,13 @@ public final class AdminDtos {
 	}
 
 	/**
-	 * 자동 환불 실패 기록 1건 (T22). cancelStatus = 그 환불 건의 현재 상태로 해결 여부를 뜻한다
-	 * (SUCCEEDED 해결됨 · PENDING 자동 재시도 중 · MANUAL_REVIEW 미해결).
+	 * PG 오류 기록 1건 (T23) — 결제 승인 실패(kind=APPROVE) 또는 환불 실패(kind=CANCEL).
+	 * currentStatus 는 APPROVE 면 payment.status, CANCEL 이면 payment_cancel.status. resolved = 결과 확정(삭제 가능).
+	 * attemptNo · cancelReason 은 환불에만 있다.
 	 */
-	public record PaymentCancelFailureRecord(Long id, Long paymentCancelId, String reason, String cancelStatus,
-			int attemptNo, String errorCode, Integer httpStatus, String errorMessage, Instant occurredAt,
-			Long reservationId, String reservationNo) {
+	public record PgErrorRecord(String kind, Long id, Instant occurredAt, Long reservationId, String reservationNo,
+			Long paymentId, Integer attemptNo, String cancelReason, String errorCode, Integer httpStatus,
+			String errorMessage, String currentStatus, boolean resolved) {
 	}
 
 	public record PaymentCancelRetryResult(Long id, String status, int attemptCount, String lastError) {

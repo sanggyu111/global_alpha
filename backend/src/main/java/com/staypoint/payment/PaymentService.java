@@ -17,6 +17,7 @@ import com.staypoint.common.StaypointProperties;
 import com.staypoint.common.error.BusinessException;
 import com.staypoint.common.error.ErrorCode;
 import com.staypoint.payment.PgClient.PgApproval;
+import com.staypoint.payment.PgClient.PgRejectedException;
 import com.staypoint.payment.PgClient.PgUnavailableException;
 
 /**
@@ -36,15 +37,18 @@ public class PaymentService {
 	private final PaymentProcessor processor;
 	private final PaymentCancelExecutor cancelExecutor;
 	private final PaymentRepository paymentRepository;
+	private final PaymentApproveFailureRepository approveFailureRepository;
 	private final PgClient pgClient;
 	private final StaypointProperties properties;
 	private final Clock clock;
 
 	public PaymentService(PaymentProcessor processor, PaymentCancelExecutor cancelExecutor,
-			PaymentRepository paymentRepository, PgClient pgClient, StaypointProperties properties, Clock clock) {
+			PaymentRepository paymentRepository, PaymentApproveFailureRepository approveFailureRepository,
+			PgClient pgClient, StaypointProperties properties, Clock clock) {
 		this.processor = processor;
 		this.cancelExecutor = cancelExecutor;
 		this.paymentRepository = paymentRepository;
+		this.approveFailureRepository = approveFailureRepository;
 		this.pgClient = pgClient;
 		this.properties = properties;
 		this.clock = clock;
@@ -66,6 +70,10 @@ public class PaymentService {
 				// 결과를 모른다 — PG 에서는 승인됐을 수 있으므로 실패로 단정하지 않고 READY 로 둔다.
 				// 웹훅 또는 상태 확정 스케줄러가 확정하고, 화면에는 PROCESSING 으로 알린다.
 				log.warn("PG 승인 응답 없음 → PROCESSING: orderId={}, {}", prepared.orderId(), e.getMessage());
+				recordApproveFailure(prepared.paymentId(), e);
+			} catch (PgRejectedException e) {
+				recordApproveFailure(prepared.paymentId(), e);
+				throw e;
 			}
 		}
 		return processor.currentResult(prepared.paymentId());
@@ -101,6 +109,19 @@ public class PaymentService {
 			}
 		}
 		return checked;
+	}
+
+	/**
+	 * PG 오류 기록 (T23): 결제 상태를 바꾸지 않는 실패(응답 없음·4xx)라 PG 호출 뒤 기록만 따로 남긴다 (save 자체의 짧은 트랜잭션).
+	 * 기록 실패가 결제 응답을 막지 않게 예외는 로그로만 남긴다.
+	 */
+	private void recordApproveFailure(Long paymentId, RuntimeException e) {
+		try {
+			approveFailureRepository.save(
+					PaymentApproveFailure.of(paymentId, PgClient.PgError.of(e), e.getMessage(), clock.instant()));
+		} catch (RuntimeException recordError) {
+			log.error("PG 오류 기록 실패: paymentId={}", paymentId, recordError);
+		}
 	}
 
 	private void apply(String orderId, PgApproval result, String actor) {

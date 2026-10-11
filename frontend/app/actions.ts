@@ -149,10 +149,10 @@ export async function retryPaymentCancel(formData: FormData) {
   revalidatePath("/admin/issues");
 }
 
-/** 자동 환불 실패 기록 삭제 (T22). 버튼은 해결된 건에만 보이고, 서버도 미해결 건은 409 로 거부한다. */
-export async function deletePaymentCancelFailure(formData: FormData) {
-  await api(`/api/admin/payment-cancel-failures/${formData.get("failureId")}`, { method: "DELETE" });
-  revalidatePath("/admin/issues");
+/** PG 오류 기록 삭제 (T23). 버튼은 해결된 건에만 보이고, 서버도 미해결 건은 409 로 거부한다. */
+export async function deletePgError(formData: FormData) {
+  await api(`/api/admin/pg-errors/${formData.get("kind")}/${formData.get("id")}`, { method: "DELETE" });
+  revalidatePath("/admin/pg-errors");
 }
 
 function messageOf(error: ApiError): string {

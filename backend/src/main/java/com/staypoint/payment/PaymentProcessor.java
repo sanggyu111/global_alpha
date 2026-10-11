@@ -36,14 +36,17 @@ class PaymentProcessor {
 	private final ReservationHistoryRepository historyRepository;
 	private final PaymentRepository paymentRepository;
 	private final PaymentCancelRepository cancelRepository;
+	private final PaymentApproveFailureRepository approveFailureRepository;
 	private final Clock clock;
 
 	PaymentProcessor(ReservationRepository reservationRepository, ReservationHistoryRepository historyRepository,
-			PaymentRepository paymentRepository, PaymentCancelRepository cancelRepository, Clock clock) {
+			PaymentRepository paymentRepository, PaymentCancelRepository cancelRepository,
+			PaymentApproveFailureRepository approveFailureRepository, Clock clock) {
 		this.reservationRepository = reservationRepository;
 		this.historyRepository = historyRepository;
 		this.paymentRepository = paymentRepository;
 		this.cancelRepository = cancelRepository;
+		this.approveFailureRepository = approveFailureRepository;
 		this.clock = clock;
 	}
 
@@ -111,6 +114,8 @@ class PaymentProcessor {
 		Instant now = now();
 		if (!result.approved()) {
 			payment.fail(result.failReason(), now); // 예약은 PENDING 유지 → 만료 전 재결제 가능 (정책 5.4)
+			// PG 오류 기록 (T23): READY → FAILED 전이와 같은 트랜잭션 → 동기 응답·웹훅·스케줄러 중 누가 반영해도 결제당 한 번
+			approveFailureRepository.save(PaymentApproveFailure.declined(payment.getId(), result.failReason(), now));
 			return new Applied(null);
 		}
 

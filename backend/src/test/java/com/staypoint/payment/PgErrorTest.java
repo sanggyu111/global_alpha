@@ -32,6 +32,10 @@ class PgErrorTest {
 	void 응답이_없으면_타임아웃과_연결_실패를_구분한다() {
 		assertThat(PgError.of(unavailable(new ResourceAccessException("x", new SocketTimeoutException("Read timed out")))))
 				.isEqualTo(new PgError(PgErrorCode.PG_TIMEOUT, null));
+		// 응답 본문을 읽다 타임아웃 — 실제 지연 응답에서 이 모양으로 온다 (L061)
+		assertThat(PgError.of(unavailable(new RestClientException("Error while extracting response",
+				new SocketTimeoutException("Read timed out")))))
+				.isEqualTo(new PgError(PgErrorCode.PG_TIMEOUT, null));
 		assertThat(PgError.of(unavailable(new ResourceAccessException("x", new ConnectException("refused")))))
 				.isEqualTo(new PgError(PgErrorCode.PG_CONNECTION, null));
 		assertThat(PgError.of(unavailable(null))).isEqualTo(new PgError(PgErrorCode.PG_CONNECTION, null)); // PG 주소 미정

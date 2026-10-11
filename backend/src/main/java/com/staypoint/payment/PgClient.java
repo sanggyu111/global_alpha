@@ -64,9 +64,11 @@ public class PgClient {
 		}
 	}
 
-	/** PG 실패 원인 분류 (설계 8.4 T22) — 환불 실패 기록의 오류 코드. */
+	/** PG 실패 원인 분류 (설계 8.4 T22 · 8.5 T23) — 환불·결제 승인 실패 기록의 오류 코드. */
 	public enum PgErrorCode {
-		PG_5XX, PG_TIMEOUT, PG_CONNECTION, PG_REJECTED, PG_UNKNOWN
+		PG_5XX, PG_TIMEOUT, PG_CONNECTION, PG_REJECTED, PG_UNKNOWN,
+		/** 결제 승인을 PG 가 정상 응답으로 거절 (T23, 결제 승인에만 쓰임) */
+		PG_DECLINED
 	}
 
 	/** httpStatus 는 PG 가 HTTP 응답을 돌려준 경우(5xx·4xx)에만 있다. */
@@ -75,14 +77,17 @@ public class PgClient {
 		/** 이 클래스가 던진 예외를 원인(cause)으로 분류한다. */
 		public static PgError of(RuntimeException e) {
 			Throwable cause = e.getCause();
+			// 타임아웃을 먼저 본다: 응답 본문을 읽다 끊기면 ResourceAccessException 이 아니라
+			// "Error while extracting response" RestClientException 이 SocketTimeoutException 을 감싸서 온다 (L061)
+			if (causedBy(cause, SocketTimeoutException.class)) {
+				return new PgError(PgErrorCode.PG_TIMEOUT, null);
+			}
 			if (cause instanceof HttpStatusCodeException http) {
 				PgErrorCode code = http.getStatusCode().is4xxClientError() ? PgErrorCode.PG_REJECTED : PgErrorCode.PG_5XX;
 				return new PgError(code, http.getStatusCode().value());
 			}
 			if (cause == null || cause instanceof ResourceAccessException) {
-				// 원인 없음 = PG 주소를 정하지 못함. 연결·읽기 타임아웃은 모두 SocketTimeoutException 으로 온다
-				return new PgError(causedBy(cause, SocketTimeoutException.class) ? PgErrorCode.PG_TIMEOUT
-						: PgErrorCode.PG_CONNECTION, null);
+				return new PgError(PgErrorCode.PG_CONNECTION, null); // 원인 없음 = PG 주소를 정하지 못함
 			}
 			return new PgError(PgErrorCode.PG_UNKNOWN, null);
 		}
