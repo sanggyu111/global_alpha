@@ -663,6 +663,17 @@ const LOG = [
     cause: "결제 승인 실패는 payment.fail_reason 한 줄만 남고, 응답 없음(PROCESSING) 이력은 어디에도 남지 않음.",
     resolution: "V4 payment_approve_failure. PG 거절은 READY→FAILED 전이와 같은 트랜잭션(결제당 1회), 응답 없음·4xx 는 PG 호출 직후 기록. 상태 확정 스케줄러의 조회 실패는 반복되므로 로그로만. 조회·삭제 API 를 /api/admin/pg-errors 로 통합(UNION ALL)하고 T22 API·확인 필요의 표 제거. 설계 8.5.",
     refs: ["docs/02-design.md §8.5"],
+  },  {
+    id: "L061",
+    at: "2026-10-11",
+    task: "T23",
+    type: "fix",
+    status: "resolved",
+    title: "실제 PG 응답 지연 타임아웃이 PG_TIMEOUT 이 아니라 PG_UNKNOWN 으로 분류됨 (T22 부터 있던 결함)",
+    detail: "T23 통합 테스트(지연 2.5초 > 읽기 타임아웃 1.5초) 에서 기대 PG_TIMEOUT, 실제 PG_UNKNOWN. 로그: 'PG 응답 없음: Error while extracting response for type [ApproveResponse]'.",
+    cause: "PgError.of 가 원인이 ResourceAccessException 일 때만 SocketTimeoutException 을 찾았음. 응답 헤더는 받고 본문을 읽다 타임아웃이 나면 RestClient 가 일반 RestClientException 으로 감싸서 던짐. T22 단위 테스트는 ResourceAccessException 모양만 만들어 놓쳤음.",
+    resolution: "원인 사슬 전체에서 SocketTimeoutException 을 가장 먼저 확인하도록 순서 변경. 실제 예외 모양을 PgErrorTest 에 추가. 이미 배포된 T22 의 환불 실패 기록 중 타임아웃이 있었다면 PG_UNKNOWN 으로 남아 있을 수 있음(데모 장애 주입은 503·422 라 해당 없음).",
+    refs: ["backend/src/main/java/com/staypoint/payment/PgClient.java PgError.of", "backend/src/test/java/com/staypoint/payment/PgErrorTest.java"],
   },
 ];
 </script>
