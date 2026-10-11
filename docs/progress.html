@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-11",
-  currentTask: "T24",
+  currentTask: "T16",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -169,6 +169,12 @@ const PROGRESS = {
       status: "done", branch: "feat/T24-pay-refund-policy",
       checks: { error: true, spec: true }, commits: ["535c451", "31d9035", "ab3c4cf"],
       note: "설계 8.6 (L062). frontend lint·build 통과 (백엔드 변경 없음). 로컬 실제 앱: 체크인 10/15 예약의 결제 화면에 환불 규정 표 — 10/08 까지 100%(지남) · 10/09~10/12 70% · 10/13~10/14 50% · 10/15 부터 0%, 환불액 276,000 / 193,200 / 138,000 / 0원. 결제 후 백엔드 환불 예정액(D=4 → 70%, 193,200원)과 표가 일치. 결제 결과 선택지는 항상 승인 / 항상 거절 2개. 사용자 승인으로 main 병합·push.",
+    },
+    {
+      id: "T25", phase: "dev", title: "점검 피드백 반영 — 결제 상태 한글, 승인 기본 실패율 0, 연박 부분 겹침 · 시간대 경계 테스트",
+      status: "done", branch: "feat/T25-feedback-fixes",
+      checks: { error: true, spec: true }, commits: ["207616f", "12f4364", "2807d62", "69a55cf", "9c75ddd", "86e625c"],
+      note: "설계 8.7 (L062). backend build 통과 (테스트 183건 = 180 + 연박 부분 겹침 1 + 시간대 2), frontend lint·build 통과. 연박 부분 겹침 테스트 4회 실행 모두 예상 밖 오류(데드락) 0, 날짜별 booked = 예약 수 ≤ 2. 시간대 테스트는 고정 Clock 을 UTC 로 바꾸면 실패함을 확인(의미 있는 테스트). 로컬 실제 앱: 결제 상태 '승인' / 환불 전 취소 '승인' / 환불 완료 '취소(환불)됨', failRate 없이 결제 API 10회 → 10회 승인. GitHub 새 clone 에서 backend build(180건)·frontend npm ci·lint·build 통과 (T23 시점). 사용자 승인으로 main 병합·push.",
     },
   ],
 
