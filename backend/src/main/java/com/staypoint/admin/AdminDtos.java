@@ -48,8 +48,8 @@ public final class AdminDtos {
 	}
 
 	/** expectedBookedCount = 그 날짜를 쓰는 활성 예약(PENDING · CONFIRMED · COMPLETED) 수 = 정답. */
-	public record InventoryMismatch(Long roomTypeId, LocalDate stayDate, int totalCount, int bookedCount,
-			int expectedBookedCount) {
+	public record InventoryMismatch(Long roomTypeId, String propertyName, String roomTypeName, LocalDate stayDate,
+			int totalCount, int bookedCount, int expectedBookedCount) {
 	}
 
 	public record RecountResult(Long roomTypeId, LocalDate stayDate, int before, int after) {

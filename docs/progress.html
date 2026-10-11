@@ -148,9 +148,9 @@ const PROGRESS = {
     },
     {
       id: "T21", phase: "dev", title: "환불 상태 강조 · 재고 불일치 문구 정리",
-      status: "todo", branch: "feat/T21-refund-status-highlight",
-      checks: { error: null, spec: null }, commits: [],
-      note: "설계 8.4 (사용자 피드백 2026-10-11, L058).",
+      status: "review", branch: "feat/T21-refund-status-highlight",
+      checks: { error: true, spec: true }, commits: ["05e503a", "13c3b5c", "abbeb4e"],
+      note: "설계 8.4 (L058). backend build 통과 (테스트 170건, 불일치 API 이름 필드 검증 추가), frontend lint·build 통과. 로컬 실제 앱: 장애 5회 취소 → 상세 '환불 진행 중' 빨간 굵은 글씨 + 안내, PG 거절 → '운영자 확인 중' 빨간색 + 안내, 정상 취소 → '환불 완료' 기본색. 재고 불일치를 일부러 만들어 관리자 화면에 새 문구·'숙소 / 객실' 이름·열 이름 표시 확인 후 재계산으로 원복(불일치 0).",
     },
     {
       id: "T22", phase: "dev", title: "자동 환불 실패 기록 — V3 payment_cancel_failure, 기간 조회 · 오류 코드 · 해결 여부 · 삭제",

@@ -6,7 +6,7 @@ import type { InventoryMismatch, PaymentCancelIssue } from "@/lib/types";
 /**
  * 운영자 확인 대상 (FR-UI-5, README Q6).
  * ① 자동 환불(PG 취소)이 재시도를 다 쓰고도 실패했거나 PG 가 거절한 건 — 고객 돈이 아직 돌아가지 않았다
- * ② 재고 불일치 — booked_count 가 그 날짜를 쓰는 활성 예약 수와 다른 날짜
+ * ② 재고 불일치 — booked_count(판매된 객실 수)가 그 날짜를 쓰는 활성 예약 수와 다른 날짜. 예약 테이블이 기준
  */
 export default async function AdminIssuesPage() {
   const [cancels, retrying, mismatches] = await Promise.all([
@@ -103,8 +103,9 @@ export default async function AdminIssuesPage() {
 
       <h2>재고 불일치 (오늘부터 1년)</h2>
       <p className="muted">
-        정답은 예약 테이블입니다. 원인을 확인한 뒤 재계산하면 해당 날짜의 예약 수를 활성 예약(결제 대기·확정·이용
-        완료) 수로 맞춥니다.
+        날짜별 &quot;판매된 객실 수&quot;가 실제 예약 건수와 다른 날짜입니다. 정상이면 항상 비어 있습니다. 실제 예약
+        건수(결제 대기·확정·이용 완료)가 기준이며, 원인(DB 직접 수정, 버그 등)을 확인한 뒤 [재계산]을 누르면 판매된
+        객실 수를 실제 예약 건수로 고칩니다.
       </p>
       {!mismatches.ok ? (
         <p className="error">{mismatches.error.message}</p>
@@ -114,18 +115,20 @@ export default async function AdminIssuesPage() {
         <table>
           <thead>
             <tr>
-              <th>객실 타입</th>
+              <th>숙소 / 객실</th>
               <th>날짜</th>
-              <th>재고</th>
-              <th>booked_count</th>
-              <th>실제 활성 예약</th>
+              <th>전체 객실</th>
+              <th>판매된 객실 수</th>
+              <th>실제 예약 건수</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {mismatches.data.map((m) => (
               <tr key={`${m.roomTypeId}-${m.stayDate}`}>
-                <td>{m.roomTypeId}</td>
+                <td>
+                  {m.propertyName} / {m.roomTypeName}
+                </td>
                 <td>{m.stayDate}</td>
                 <td>{m.totalCount}</td>
                 <td className="error">{m.bookedCount}</td>

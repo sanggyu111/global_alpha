@@ -149,6 +149,8 @@ export type PaymentCancelIssue = {
 
 export type InventoryMismatch = {
   roomTypeId: number;
+  propertyName: string;
+  roomTypeName: string;
   stayDate: string;
   totalCount: number;
   bookedCount: number;

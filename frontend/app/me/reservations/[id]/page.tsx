@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { api } from "@/lib/api";
-import { CANCEL_REASON_LABEL, REFUND_STATUS_LABEL, STATUS_LABEL, dateTime, won } from "@/lib/format";
+import { CANCEL_REASON_LABEL, REFUND_PROBLEM_NOTICE, REFUND_STATUS_LABEL, STATUS_LABEL, dateTime, won } from "@/lib/format";
 import type { ReservationDetail } from "@/lib/types";
 import { getUserId } from "@/lib/user";
 
@@ -68,8 +68,19 @@ export default async function MyReservationPage({ params }: { params: Promise<{ 
           </div>
           <div>
             환불 금액 <strong>{won(r.refundAmount ?? 0)}</strong>
-            {r.refundStatus && <> · {REFUND_STATUS_LABEL[r.refundStatus] ?? r.refundStatus}</>}
+            {r.refundStatus && (
+              <>
+                {" · "}
+                {/* 환불이 아직 끝나지 않은 상태만 강조한다 — 완료·환불 없음까지 빨간색이면 강조가 의미를 잃는다 */}
+                <span className={REFUND_PROBLEM_NOTICE[r.refundStatus] ? "error strong" : undefined}>
+                  {REFUND_STATUS_LABEL[r.refundStatus] ?? r.refundStatus}
+                </span>
+              </>
+            )}
           </div>
+          {r.refundStatus && REFUND_PROBLEM_NOTICE[r.refundStatus] && (
+            <p className="error">{REFUND_PROBLEM_NOTICE[r.refundStatus]}</p>
+          )}
         </div>
       )}
 
