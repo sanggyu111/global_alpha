@@ -149,6 +149,12 @@ export async function retryPaymentCancel(formData: FormData) {
   revalidatePath("/admin/issues");
 }
 
+/** 자동 환불 실패 기록 삭제 (T22). 버튼은 해결된 건에만 보이고, 서버도 미해결 건은 409 로 거부한다. */
+export async function deletePaymentCancelFailure(formData: FormData) {
+  await api(`/api/admin/payment-cancel-failures/${formData.get("failureId")}`, { method: "DELETE" });
+  revalidatePath("/admin/issues");
+}
+
 function messageOf(error: ApiError): string {
   const fieldMessages = error.details
     ? Object.values(error.details).flatMap((v) => (typeof v === "string" ? [v] : Array.isArray(v) ? [v.join(", ")] : []))
