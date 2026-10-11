@@ -696,6 +696,17 @@ const LOG = [
     cause: "잠금 없이 세면 READ COMMITTED 에서 '재고는 바꿨지만 아직 커밋 전' 인 예약·취소가 COUNT 에 반영되지 않고, 재계산 UPDATE 가 그 트랜잭션 커밋 뒤 옛 값으로 덮어써 그 몫이 사라진다.",
     resolution: "AdminRecountConcurrencyTest: booked_count 를 실제 4 → 10 으로 틀어 둔 뒤 재계산 1 + 새 예약 8 + 취소 4 를 동시에 실행, 끝난 뒤 booked = 활성 예약 수·불일치 0. 20회 통과. 테스트가 의미 있는지 보려고 재계산의 FOR UPDATE 를 임시로 빼고 돌리니 5회 중 2회 실패(기대 8 → 6: 예약 몫 유실, 9: 취소 몫 유실) — 원복 후 커밋. 운영 코드 변경 없음.",
     refs: ["backend/src/test/java/com/staypoint/admin/AdminRecountConcurrencyTest.java", "README.md Q3·Q6"],
+  },  {
+    id: "L064",
+    at: "2026-10-11",
+    task: "T27",
+    type: "fix",
+    status: "resolved",
+    title: "배포 점검: '응답 지연 5초' 결제가 처리 중 없이 바로 확정됨 — 모의 PG 웹훅 순서 변경, 검증 메시지 한국어",
+    detail: "README 데모 시나리오대로 배포본을 API·실제 Chrome 으로 점검. 정합성 문제는 없었으나 ① 지연 5초 결제가 약 3.9초 만에 CONFIRMED 로 응답(README·화면 선택지는 '타임아웃 → 처리 중') ② 빈 예약자 이름의 검증 메시지가 영어 기본값 'must not be blank' ③ 관리자 예약 목록 page=-1 오류 상세에 size 만 담김.",
+    cause: "① 모의 PG 가 승인 기록 → 웹훅 전송 → 지연 → 응답 순서라, 백엔드 읽기 타임아웃(3초) 전에 웹훅이 결제를 확정해 둠. 타임아웃 뒤 currentResult 가 이미 CONFIRMED 를 읽음 (PG_TIMEOUT 기록·해결됨은 정상). ② Bean Validation 어노테이션에 message 미지정 ③ details 에 page 누락.",
+    resolution: "사용자 선택 (b)안: 웹훅을 지연 뒤(응답 시점)에 전송 — 실제 PG 의 일반적인 순서. PaymentTimeoutWebhookTest 로 타임아웃 → PROCESSING → 웹훅 확정 1회 검증, 예전 순서에서 실패 확인. 예약·관리자 요청 DTO 에 한국어 메시지, page 오류 상세에 page·size. 로컬 화면에서 3.4초 처리 중 → 5.6초 확정 확인.",
+    refs: ["docs/02-design.md §8.8", "backend/src/main/java/com/staypoint/mockpg/MockPgController.java", "backend/src/test/java/com/staypoint/payment/PaymentTimeoutWebhookTest.java"],
   },
 ];
 </script>
