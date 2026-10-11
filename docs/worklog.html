@@ -674,6 +674,17 @@ const LOG = [
     cause: "PgError.of 가 원인이 ResourceAccessException 일 때만 SocketTimeoutException 을 찾았음. 응답 헤더는 받고 본문을 읽다 타임아웃이 나면 RestClient 가 일반 RestClientException 으로 감싸서 던짐. T22 단위 테스트는 ResourceAccessException 모양만 만들어 놓쳤음.",
     resolution: "원인 사슬 전체에서 SocketTimeoutException 을 가장 먼저 확인하도록 순서 변경. 실제 예외 모양을 PgErrorTest 에 추가. 이미 배포된 T22 의 환불 실패 기록 중 타임아웃이 있었다면 PG_UNKNOWN 으로 남아 있을 수 있음(데모 장애 주입은 503·422 라 해당 없음).",
     refs: ["backend/src/main/java/com/staypoint/payment/PgClient.java PgError.of", "backend/src/test/java/com/staypoint/payment/PgErrorTest.java"],
+  },  {
+    id: "L062",
+    at: "2026-10-11",
+    task: "T24",
+    type: "change",
+    status: "resolved",
+    title: "결제 화면 환불 규정 표시 · 결제 데모 50% 선택지 제거 (사용자 요청) + 외부 AI 점검 피드백 검증",
+    detail: "사용자 요청: 결제 화면에 환불 규정 명시, 결제 데모는 항상 성공/항상 실패만. 함께 받은 생성형 AI 의 배포 사이트 점검 피드백 두 건을 직접 확인.",
+    cause: "피드백의 최우선 문제('URL 의 날짜·인원·지역이 반영되지 않고 기본값으로 돌아감', '연박 예약 흔적 없음') 는 재현되지 않음 — 쿠키 없는 요청으로 배포본에 같은 조건을 보내면 2박·3명, 3박·2명, 제주 3박·4명이 그대로 반영되고, 배포 DB 에 3박 2건·4박 1건 예약이 있음. 점검 도구 쪽 문제로 판단.",
+    resolution: "T24 로 요청 2건 구현. 피드백 중 확인된 사실(배포 DB 의 실명·테스트 데이터, 확정 예약 0건, 예약 상세의 결제 상태 영문 표기, 연박 부분 겹침 동시성 테스트 없음, 시간대 경계 테스트 없음) 은 사용자에게 보고하고 처리 여부를 결정받기로 함.",
+    refs: ["docs/02-design.md §8.6"],
   },
 ];
 </script>
