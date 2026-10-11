@@ -170,17 +170,21 @@ export type PropertySearch = {
   properties: PropertyWithRooms[];
 };
 
-// 자동 환불 실패 기록 (T22) — cancelStatus 가 해결 여부: SUCCEEDED 해결됨 · PENDING 자동 재시도 중 · MANUAL_REVIEW 미해결
-export type PaymentCancelFailureRecord = {
+// PG 오류 기록 (T23) — 결제 승인 실패(APPROVE) + 환불 실패(CANCEL). resolved = 원래 건의 결과가 확정됨(삭제 가능)
+export type PgErrorKind = "APPROVE" | "CANCEL";
+
+export type PgErrorRecord = {
+  kind: PgErrorKind;
   id: number;
-  paymentCancelId: number;
-  reason: "USER_CANCEL" | "COMPENSATION";
-  cancelStatus: "PENDING" | "SUCCEEDED" | "MANUAL_REVIEW";
-  attemptNo: number;
-  errorCode: string;
-  httpStatus: number | null;
-  errorMessage: string | null;
   occurredAt: string;
   reservationId: number;
   reservationNo: string;
+  paymentId: number;
+  attemptNo: number | null;
+  cancelReason: "USER_CANCEL" | "COMPENSATION" | null;
+  errorCode: string;
+  httpStatus: number | null;
+  errorMessage: string | null;
+  currentStatus: string;
+  resolved: boolean;
 };

@@ -1,31 +1,17 @@
-import { deletePaymentCancelFailure, recountInventory, retryPaymentCancel } from "@/app/actions";
+import { recountInventory, retryPaymentCancel } from "@/app/actions";
 import { api } from "@/lib/api";
-import { dateTime, seoulDate, won } from "@/lib/format";
-import type { InventoryMismatch, PaymentCancelFailureRecord, PaymentCancelIssue } from "@/lib/types";
-
-type Search = { from?: string; to?: string };
-
-// 해결 여부 = 그 환불 건의 현재 상태 (T22, 따로 저장하지 않음)
-const RESOLUTION: Record<PaymentCancelFailureRecord["cancelStatus"], { label: string; className?: string }> = {
-  SUCCEEDED: { label: "해결됨 (환불 완료)", className: "success" },
-  PENDING: { label: "자동 재시도 중" },
-  MANUAL_REVIEW: { label: "미해결 (운영자 확인)", className: "error strong" },
-};
+import { dateTime, won } from "@/lib/format";
+import type { InventoryMismatch, PaymentCancelIssue } from "@/lib/types";
 
 /**
  * 운영자 확인 대상 (FR-UI-5, README Q6).
  * ① 자동 환불(PG 취소)이 재시도를 다 쓰고도 실패했거나 PG 가 거절한 건 — 고객 돈이 아직 돌아가지 않았다
- * ② 자동 환불 실패 기록 (T22) — 재시도로 결국 환불된 건도 실패했던 회차가 남는다. 기간은 URL searchParams (GET 폼)
- * ③ 재고 불일치 — booked_count(판매된 객실 수)가 그 날짜를 쓰는 활성 예약 수와 다른 날짜. 예약 테이블이 기준
+ * ② 재고 불일치 — booked_count(판매된 객실 수)가 그 날짜를 쓰는 활성 예약 수와 다른 날짜. 예약 테이블이 기준
  */
-export default async function AdminIssuesPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const search = await searchParams;
-  const from = search.from || seoulDate(-29);
-  const to = search.to || seoulDate();
-  const [cancels, retrying, failures, mismatches] = await Promise.all([
+export default async function AdminIssuesPage() {
+  const [cancels, retrying, mismatches] = await Promise.all([
     api<PaymentCancelIssue[]>("/api/admin/payment-cancels?status=MANUAL_REVIEW"),
     api<PaymentCancelIssue[]>("/api/admin/payment-cancels?status=PENDING"),
-    api<PaymentCancelFailureRecord[]>(`/api/admin/payment-cancel-failures?${new URLSearchParams({ from, to })}`),
     api<InventoryMismatch[]>("/api/admin/inventory/mismatches"),
   ]);
 
@@ -108,65 +94,6 @@ export default async function AdminIssuesPage({ searchParams }: { searchParams: 
                     <input type="hidden" name="cancelId" value={c.id} />
                     <button type="submit">수동 재시도</button>
                   </form>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <h2>자동 환불 실패 기록</h2>
-      <p className="muted">
-        PG 환불 시도가 실패할 때마다 남는 기록입니다. 재시도로 결국 환불된 건도 실패했던 회차가 남습니다. 해결 여부는
-        그 환불 건의 현재 상태이며, 기록 삭제는 해결된(환불 완료) 건만 할 수 있습니다.
-      </p>
-      <form className="inline card">
-        <label>
-          발생일 <input type="date" name="from" defaultValue={from} />
-        </label>
-        <label>
-          ~ <input type="date" name="to" defaultValue={to} />
-        </label>
-        <button type="submit">조회</button>
-      </form>
-      {!failures.ok ? (
-        <p className="error">{failures.error.message}</p>
-      ) : failures.data.length === 0 ? (
-        <p>없음</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>발생 시각</th>
-              <th>예약</th>
-              <th>사유</th>
-              <th>회차</th>
-              <th>오류 코드</th>
-              <th>메시지</th>
-              <th>해결 여부</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {failures.data.map((f) => (
-              <tr key={f.id}>
-                <td>{dateTime(f.occurredAt)}</td>
-                <td>{f.reservationNo}</td>
-                <td>{f.reason === "COMPENSATION" ? "확정 실패 보상 취소" : "사용자 취소 환불"}</td>
-                <td>{f.attemptNo}회차</td>
-                <td>
-                  {f.errorCode}
-                  {f.httpStatus && <div className="muted">HTTP {f.httpStatus}</div>}
-                </td>
-                <td className="muted">{f.errorMessage ?? "-"}</td>
-                <td className={RESOLUTION[f.cancelStatus].className}>{RESOLUTION[f.cancelStatus].label}</td>
-                <td>
-                  {f.cancelStatus === "SUCCEEDED" && (
-                    <form action={deletePaymentCancelFailure}>
-                      <input type="hidden" name="failureId" value={f.id} />
-                      <button type="submit">삭제</button>
-                    </form>
-                  )}
                 </td>
               </tr>
             ))}
