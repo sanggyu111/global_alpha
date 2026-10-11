@@ -184,9 +184,9 @@ const PROGRESS = {
     },
     {
       id: "T27", phase: "dev", title: "배포 점검 반영 — 타임아웃 데모(처리 중 → 웹훅 확정) 재현, 검증 메시지 한국어, 페이지 오류 상세",
-      status: "review", branch: "fix/T27-timeout-demo",
+      status: "done", branch: "fix/T27-timeout-demo",
       checks: { error: true, spec: true }, commits: ["5d3f39d", "f69d2d1", "4ac9324", "427e9b7", "ec06dc1"],
-      note: "설계 8.8 (L064). backend build 통과 (테스트 190건 = 188 + 타임아웃 웹훅 1 + 빈 예약자 이름 1). 새 타임아웃 테스트는 웹훅을 먼저 보내던 예전 순서로 돌리면 실패(PROCESSING 기대 → CONFIRMED) 확인. 로컬 실제 앱(Chrome): 지연 5초 결제 → 3.4초 '결제 결과를 확인하는 중' → 5.6초 '예약 확정', 이후 취소 → 환불 완료. frontend 변경 없음.",
+      note: "설계 8.8 (L064). backend build 통과 (테스트 190건 = 188 + 타임아웃 웹훅 1 + 빈 예약자 이름 1). 새 타임아웃 테스트는 웹훅을 먼저 보내던 예전 순서로 돌리면 실패(PROCESSING 기대 → CONFIRMED) 확인. 로컬 실제 앱(Chrome): 지연 5초 결제 → 3.4초 '결제 결과를 확인하는 중' → 5.6초 '예약 확정', 이후 취소 → 환불 완료. frontend 변경 없음. 사용자 승인으로 main 병합·push.",
     },
   ],
 
