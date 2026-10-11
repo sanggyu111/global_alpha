@@ -78,10 +78,12 @@ public class MockPgController {
 		long delay = delay(delayMs, properties.approve().delayMs());
 
 		MockPgService.ApproveOutcome outcome = service.approve(request.orderId(), request.amount(), rate);
-		if (outcome.created()) {
-			webhookSender.sendAsync(outcome.payment()); // 트랜잭션 커밋 후라 통지를 받은 쪽이 바로 조회해도 보인다
-		}
 		sleep(delay);
+		// 통지는 지연이 끝난 뒤 (응답과 같은 시점). 먼저 보내면 호출한 쪽이 타임아웃 나기 전에 통지로 확정돼
+		// "응답 없음 → 처리 중 → 통지로 확정" 데모가 재현되지 않는다 (T27). 승인 기록은 이미 커밋돼 있다
+		if (outcome.created()) {
+			webhookSender.sendAsync(outcome.payment());
+		}
 		return PaymentResponse.from(outcome.payment());
 	}
 
