@@ -21,6 +21,12 @@ export const REFUND_STATUS_LABEL: Record<string, string> = {
   MANUAL_REVIEW: "운영자 확인 중 (자동 환불 실패)",
 };
 
+/** 환불이 끝나지 않은 상태 → 예약 상세에서 빨간색으로 강조하고 붙이는 안내 (T21) */
+export const REFUND_PROBLEM_NOTICE: Record<string, string> = {
+  PENDING: "PG 장애로 환불이 지연되고 있어 자동으로 다시 시도합니다.",
+  MANUAL_REVIEW: "자동 환불에 실패해 운영자가 확인 중입니다.",
+};
+
 export const CANCEL_REASON_LABEL: Record<string, string> = {
   USER_CANCEL: "사용자 취소",
   HOLD_EXPIRED: "결제 시간(선점) 만료",
