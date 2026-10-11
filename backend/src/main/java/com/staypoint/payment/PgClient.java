@@ -64,9 +64,11 @@ public class PgClient {
 		}
 	}
 
-	/** PG 실패 원인 분류 (설계 8.4 T22) — 환불 실패 기록의 오류 코드. */
+	/** PG 실패 원인 분류 (설계 8.4 T22 · 8.5 T23) — 환불·결제 승인 실패 기록의 오류 코드. */
 	public enum PgErrorCode {
-		PG_5XX, PG_TIMEOUT, PG_CONNECTION, PG_REJECTED, PG_UNKNOWN
+		PG_5XX, PG_TIMEOUT, PG_CONNECTION, PG_REJECTED, PG_UNKNOWN,
+		/** 결제 승인을 PG 가 정상 응답으로 거절 (T23, 결제 승인에만 쓰임) */
+		PG_DECLINED
 	}
 
 	/** httpStatus 는 PG 가 HTTP 응답을 돌려준 경우(5xx·4xx)에만 있다. */
