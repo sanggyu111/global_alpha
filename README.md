@@ -100,7 +100,7 @@ npm run lint && npm run build # 타입 체크 포함
 |---|---|
 | 정상 흐름 | `/` → 숙소 → 날짜·인원 검색 → 예약하기 → 이름·연락처 → 결제하기 → "예약 확정" |
 | 결제 거절 후 재결제 | 결제 화면 "결제 결과: 항상 거절" 로 결제 → 거절 → "항상 승인" 으로 다시 결제 → 확정. 관리자 "PG 오류" 에 `PG_DECLINED` 1건 (T23) |
-| PG 타임아웃 | "응답 지연 5초" (백엔드 PG 읽기 타임아웃 3초) → 처리 중 → 웹훅/재조회로 확정. 관리자 "PG 오류" 에 `PG_TIMEOUT` 이 "결과 확인 중" 으로 보였다가 확정 후 "해결됨" (T23) |
+| PG 타임아웃 | "응답 지연 5초" (백엔드 PG 읽기 타임아웃 3초) → 약 3초에 "결제 결과를 확인하는 중" → 약 5초에 PG 웹훅이 와서 "예약 확정" (웹훅이 오지 않으면 상태 확정 스케줄러가 1분 뒤 PG 조회로 확정). 모의 PG 는 실제 PG 처럼 지연(응답)이 끝난 뒤 웹훅을 보낸다 — 처음엔 웹훅을 먼저 보내 타임아웃 전에 확정돼 버려 "처리 중" 이 보이지 않았다 (배포 점검에서 발견, T27). 관리자 "PG 오류" 에 `PG_TIMEOUT` 이 "결과 확인 중" 으로 보였다가 확정 후 "해결됨" (T23) |
 | 마지막 1실 경쟁 | "스테이포인트 제주 애월 / 독채 풀빌라" 는 재고 1실. 두 사용자 ID 로 같은 날짜 예약 → 한 명만 성공 |
 | 취소·환불 | 상단 "내 예약" → 상세 → 지금 취소 시 환불 예정액 확인 → 예약 취소 |
 | **환불 실패 → 운영자 확인** | 확정 예약 상세 → "데모: 모의 PG 환불 결과" 에서 고른 뒤 예약 취소 → 상세의 환불 상태가 **빨간색**(환불 진행 중 / 운영자 확인 중)으로 바뀐다 → 상단 "관리자" → "확인 필요". **PG 거절(4xx)** 은 즉시 "자동 환불 실패(MANUAL_REVIEW)" 에 노출 → "수동 재시도" → 상세에 "환불 완료". **PG 장애 1회** 는 "자동 재시도 중" 에 보였다가 약 1분 뒤 환불 완료. **PG 장애 5회** 는 1·2·4·8분 간격 재시도를 모두 실패해 약 15분 뒤 MANUAL_REVIEW → 수동 재시도로 환불 완료. 어느 경우든 실패한 회차는 관리자 "PG 오류" 화면에 발생 시각·오류 코드(`PG_5XX`·`PG_REJECTED` 등)·해결 여부와 함께 남고, 환불이 끝난 건의 기록만 삭제할 수 있다 (T22) |
@@ -319,7 +319,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 
 개발 중 동시 예약은 4회, 연박 부분 겹침은 4회 연속 실행해 매번 오류 0·초과 0이었다.
 
-**그 밖의 정합성 테스트** — 백엔드 테스트 188건, 전부 통과 (T26 기준)
+**그 밖의 정합성 테스트** — 백엔드 테스트 190건, 전부 통과 (T27 기준)
 
 | 테스트 | 검증 |
 |---|---|
@@ -328,7 +328,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 | 스키마 제약 | 조건 없이 +1 하는 "버그 코드" 를 흉내 내도 CHECK 가 거부, 음수 방지, 멱등 키·부분 UNIQUE |
 | 선점 만료 스케줄러 3개 동시 | 만료 대상 5건이 각각 한 번만 처리 (SKIP LOCKED) |
 | 결제 S4~S7 | 만료 예약 결제 거부 / 승인 통지 3회 동시 → 확정 1회 / 다른 키 연타 → 승인 1건 / 승인 대기 중 만료 → 보상 취소 |
-| 타임아웃 | PG 응답 지연 > 타임아웃 → PROCESSING → 상태 확정 스케줄러가 PG 조회로 확정, 같은 키 재시도해도 PG 승인 1건 |
+| 타임아웃 | PG 응답 지연 > 타임아웃 → PROCESSING → 지연 뒤 도착한 웹훅으로 확정(중복 웹훅에도 확정 1회) / 웹훅이 없으면 상태 확정 스케줄러가 PG 조회로 확정, 같은 키 재시도해도 PG 승인 1건 |
 | **환불 금액 경계값 (S10)** | D = 8·7·6·3·2·1·0·−1 → 100·100·70·70·50·50·0·0%, 99,999원 × 70% = 69,999원(내림) — [RefundPolicyTest](backend/src/test/java/com/staypoint/cancellation/RefundPolicyTest.java) |
 | 재취소·동시 3회 취소 (S9) | 같은 응답, 재고·환불·이력 1회 |
 | 결제 취소 재시도 (S8) | 아래 출력 — 5회 후 MANUAL_REVIEW, 6번째 시도 없음 / 스케줄러 3개 동시 → 각 건 1회 시도 |
@@ -345,9 +345,9 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 | 테스트 클래스 | 건수 | | 테스트 클래스 | 건수 |
 |---|---|---|---|---|
 | reservation.ReservationConcurrencyTest | 3 | | payment.PaymentFlowTest | 12 |
-| reservation.ReservationCreateApiTest | 13 | | payment.PaymentCompensationTest | 7 |
+| reservation.ReservationCreateApiTest | 14 | | payment.PaymentCompensationTest | 7 |
 | reservation.ReservationTest (상태 전이) | 16 | | payment.PaymentCancelRetryTest | 5 |
-| reservation.HoldExpiryTest | 6 | | payment.PaymentCancelRetryFailureTest | 4 |
+| reservation.HoldExpiryTest | 6 | | payment.PaymentCancelRetryFailureTest / TimeoutWebhookTest | 4 / 1 |
 | cancellation.RefundPolicyTest | 10 | | payment.PaymentDomainTest / PgErrorTest | 6 / 2 |
 | cancellation.CancellationTest | 11 | | mockpg.MockPgApiTest / WebhookTest | 17 / 2 |
 | cancellation.RefundFaultDemoTest / RefundTimezoneTest | 4 / 2 | | admin.AdminApiTest / InventoryConcurrencyTest / RecountConcurrencyTest | 12 / 3 / 5 |
