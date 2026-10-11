@@ -96,6 +96,10 @@ class AdminApiTest {
 				.andExpect(status().isBadRequest());
 		mockMvc.perform(get("/api/admin/reservations").param("size", "101"))
 				.andExpect(status().isBadRequest());
+		mockMvc.perform(get("/api/admin/reservations").param("page", "-1"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.details.page").value(-1))
+				.andExpect(jsonPath("$.details.size").value(20));
 	}
 
 	// ---------------------------------------------------------------- 재고 · 요금

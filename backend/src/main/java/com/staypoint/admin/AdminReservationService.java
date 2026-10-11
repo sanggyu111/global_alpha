@@ -37,7 +37,7 @@ public class AdminReservationService {
 			int size) {
 		if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
 			throw new BusinessException(ErrorCode.VALIDATION_FAILED,
-					"page 는 0 이상, size 는 1~" + MAX_PAGE_SIZE + " 이어야 합니다.", Map.of("size", size));
+					"page 는 0 이상, size 는 1~" + MAX_PAGE_SIZE + " 이어야 합니다.", Map.of("page", page, "size", size));
 		}
 		StringBuilder where = new StringBuilder(" WHERE 1 = 1");
 		List<Object> args = new ArrayList<>();
