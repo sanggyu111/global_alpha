@@ -178,9 +178,9 @@ const PROGRESS = {
     },
     {
       id: "T26", phase: "dev", title: "재계산 동시성 테스트 — 재계산과 예약 생성·취소가 겹쳐도 booked_count = 활성 예약 수",
-      status: "review", branch: "test/T26-recount-concurrency",
+      status: "done", branch: "test/T26-recount-concurrency",
       checks: { error: true, spec: true }, commits: ["04a92ca", "84b3ca7", "a3d0d95"],
-      note: "설계 10장·12장 (L063). 테스트만 추가, 운영 코드 변경 없음. backend build 통과 (테스트 188건 = 183 + 재계산 동시성 5회 반복). booked_count 를 10(실제 4)으로 틀어 둔 뒤 재계산 1 + 새 예약 8 + 취소 4 동시 → 4번 실행(20회) 모두 booked = 활성 예약 8. 재계산의 FOR UPDATE 를 빼면 5회 중 2회 실패(6, 9) 확인 후 원복.",
+      note: "설계 10장·12장 (L063). 테스트만 추가, 운영 코드 변경 없음. backend build 통과 (테스트 188건 = 183 + 재계산 동시성 5회 반복). booked_count 를 10(실제 4)으로 틀어 둔 뒤 재계산 1 + 새 예약 8 + 취소 4 동시 → 4번 실행(20회) 모두 booked = 활성 예약 8. 재계산의 FOR UPDATE 를 빼면 5회 중 2회 실패(6, 9) 확인 후 원복. 사용자 승인으로 main 병합·push.",
     },
   ],
 
