@@ -210,6 +210,16 @@ class ReservationCreateApiTest {
 				.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
 	}
 
+	@Test
+	void 예약자_이름이_비어_있으면_한국어_메시지로_400() throws Exception {
+		String body = body(checkIn, checkIn.plusDays(1), 2).replace("\"홍길동\"", "\"\"");
+
+		createReservation("user-1", "key-1", body)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+				.andExpect(jsonPath("$.details.guestName").value("예약자 이름을 입력해 주세요."));
+	}
+
 	private ResultActions createReservation(String userId, String key, String body) throws Exception {
 		return mockMvc.perform(post("/api/reservations")
 				.header("X-User-Id", userId)

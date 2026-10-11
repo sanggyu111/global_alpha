@@ -182,6 +182,12 @@ const PROGRESS = {
       checks: { error: true, spec: true }, commits: ["04a92ca", "84b3ca7", "a3d0d95"],
       note: "설계 10장·12장 (L063). 테스트만 추가, 운영 코드 변경 없음. backend build 통과 (테스트 188건 = 183 + 재계산 동시성 5회 반복). booked_count 를 10(실제 4)으로 틀어 둔 뒤 재계산 1 + 새 예약 8 + 취소 4 동시 → 4번 실행(20회) 모두 booked = 활성 예약 8. 재계산의 FOR UPDATE 를 빼면 5회 중 2회 실패(6, 9) 확인 후 원복. 사용자 승인으로 main 병합·push.",
     },
+    {
+      id: "T27", phase: "dev", title: "배포 점검 반영 — 타임아웃 데모(처리 중 → 웹훅 확정) 재현, 검증 메시지 한국어, 페이지 오류 상세",
+      status: "done", branch: "fix/T27-timeout-demo",
+      checks: { error: true, spec: true }, commits: ["5d3f39d", "f69d2d1", "4ac9324", "427e9b7", "ec06dc1"],
+      note: "설계 8.8 (L064). backend build 통과 (테스트 190건 = 188 + 타임아웃 웹훅 1 + 빈 예약자 이름 1). 새 타임아웃 테스트는 웹훅을 먼저 보내던 예전 순서로 돌리면 실패(PROCESSING 기대 → CONFIRMED) 확인. 로컬 실제 앱(Chrome): 지연 5초 결제 → 3.4초 '결제 결과를 확인하는 중' → 5.6초 '예약 확정', 이후 취소 → 환불 완료. frontend 변경 없음. 사용자 승인으로 main 병합·push.",
+    },
   ],
 
   // 과제 필수 요구사항 (PDF 2.3) — 우선순위 순
