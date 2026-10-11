@@ -15,7 +15,7 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-11",
-  currentTask: "T22",
+  currentTask: "T16",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
@@ -148,15 +148,15 @@ const PROGRESS = {
     },
     {
       id: "T21", phase: "dev", title: "환불 상태 강조 · 재고 불일치 문구 정리",
-      status: "review", branch: "feat/T21-refund-status-highlight",
+      status: "done", branch: "feat/T21-refund-status-highlight",
       checks: { error: true, spec: true }, commits: ["05e503a", "13c3b5c", "abbeb4e"],
-      note: "설계 8.4 (L058). backend build 통과 (테스트 170건, 불일치 API 이름 필드 검증 추가), frontend lint·build 통과. 로컬 실제 앱: 장애 5회 취소 → 상세 '환불 진행 중' 빨간 굵은 글씨 + 안내, PG 거절 → '운영자 확인 중' 빨간색 + 안내, 정상 취소 → '환불 완료' 기본색. 재고 불일치를 일부러 만들어 관리자 화면에 새 문구·'숙소 / 객실' 이름·열 이름 표시 확인 후 재계산으로 원복(불일치 0).",
+      note: "설계 8.4 (L058). backend build 통과 (테스트 170건, 불일치 API 이름 필드 검증 추가), frontend lint·build 통과. 로컬 실제 앱: 장애 5회 취소 → 상세 '환불 진행 중' 빨간 굵은 글씨 + 안내, PG 거절 → '운영자 확인 중' 빨간색 + 안내, 정상 취소 → '환불 완료' 기본색. 재고 불일치를 일부러 만들어 관리자 화면에 새 문구·'숙소 / 객실' 이름·열 이름 표시 확인 후 재계산으로 원복(불일치 0). 사용자 승인으로 main 병합·push.",
     },
     {
       id: "T22", phase: "dev", title: "자동 환불 실패 기록 — V3 payment_cancel_failure, 기간 조회 · 오류 코드 · 해결 여부 · 삭제",
-      status: "review", branch: "feat/T22-refund-failure-log",
+      status: "done", branch: "feat/T22-refund-failure-log",
       checks: { error: true, spec: true }, commits: ["6c92d4c", "d22ebd0", "60ff032", "a64b237", "7c51f5d"],
-      note: "설계 8.4 (L058). T21 브랜치에서 분기 (L059). backend build 통과 (테스트 177건 = 170 + 실패 기록 5 + 오류 코드 분류 2), frontend lint·build 통과. 로컬 실제 앱: V3 적용, 장애 1회 → PG_5XX/HTTP 503 1회차 기록(자동 재시도 중) → 실제 스케줄러가 약 1분 뒤 환불 성공 → 같은 기록이 '해결됨'으로 남음. PG 거절 → PG_REJECTED/HTTP 422 '미해결' 빨간색, 삭제 버튼 없음. 지난 기간 조회 → 없음. 삭제: 미해결 409, 해결됨 204, 다시 404, payment_cancel 은 유지. 삭제 버튼 클릭은 API 로 대신 확인.",
+      note: "설계 8.4 (L058). T21 브랜치에서 분기 (L059). backend build 통과 (테스트 177건 = 170 + 실패 기록 5 + 오류 코드 분류 2), frontend lint·build 통과. 로컬 실제 앱: V3 적용, 장애 1회 → PG_5XX/HTTP 503 1회차 기록(자동 재시도 중) → 실제 스케줄러가 약 1분 뒤 환불 성공 → 같은 기록이 '해결됨'으로 남음. PG 거절 → PG_REJECTED/HTTP 422 '미해결' 빨간색, 삭제 버튼 없음. 지난 기간 조회 → 없음. 삭제: 미해결 409, 해결됨 204, 다시 404, payment_cancel 은 유지. 삭제 버튼 클릭은 API 로 대신 확인. 사용자 승인으로 main 병합·push.",
     },
   ],
 
