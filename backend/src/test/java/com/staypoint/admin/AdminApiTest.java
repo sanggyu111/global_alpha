@@ -218,6 +218,8 @@ class AdminApiTest {
 
 		mismatches()
 				.andExpect(jsonPath("$", hasSize(2)))
+				.andExpect(jsonPath("$[0].propertyName").value("테스트 호텔"))
+				.andExpect(jsonPath("$[0].roomTypeName").value("스탠다드"))
 				.andExpect(jsonPath("$[0].stayDate").value(in.plusDays(1).toString()))
 				.andExpect(jsonPath("$[0].bookedCount").value(1))
 				.andExpect(jsonPath("$[0].expectedBookedCount").value(0))

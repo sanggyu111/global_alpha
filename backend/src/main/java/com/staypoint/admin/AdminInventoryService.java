@@ -113,19 +113,23 @@ public class AdminInventoryService {
 	public List<InventoryMismatch> mismatches(LocalDate from, LocalDate to) {
 		AdminRanges.validate(from, to);
 		return jdbc.query("""
-				SELECT i.room_type_id, i.stay_date, i.total_count, i.booked_count, COUNT(r.id) AS expected
+				SELECT i.room_type_id, p.name AS property_name, rt.name AS room_type_name,
+				       i.stay_date, i.total_count, i.booked_count, COUNT(r.id) AS expected
 				  FROM room_inventory i
+				  JOIN room_type rt ON rt.id = i.room_type_id
+				  JOIN property p   ON p.id = rt.property_id
 				  LEFT JOIN reservation r
 				    ON r.room_type_id = i.room_type_id
 				   AND i.stay_date >= r.check_in AND i.stay_date < r.check_out
 				   AND r.status IN """ + ACTIVE_STATUSES + """
 
 				 WHERE i.stay_date BETWEEN ? AND ?
-				 GROUP BY i.id
+				 GROUP BY i.id, p.name, rt.name
 				HAVING i.booked_count <> COUNT(r.id)
 				 ORDER BY i.room_type_id, i.stay_date
 				""",
-				(rs, i) -> new InventoryMismatch(rs.getLong("room_type_id"), rs.getObject("stay_date", LocalDate.class),
+				(rs, i) -> new InventoryMismatch(rs.getLong("room_type_id"), rs.getString("property_name"),
+						rs.getString("room_type_name"), rs.getObject("stay_date", LocalDate.class),
 						rs.getInt("total_count"), rs.getInt("booked_count"), rs.getInt("expected")),
 				from, to);
 	}
