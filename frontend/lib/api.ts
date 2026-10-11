@@ -15,7 +15,7 @@ export type ApiResult<T> =
   | { ok: false; status: number; error: ApiError };
 
 type Options = {
-  method?: "GET" | "POST" | "PUT";
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
   userId?: string;
   idempotencyKey?: string;

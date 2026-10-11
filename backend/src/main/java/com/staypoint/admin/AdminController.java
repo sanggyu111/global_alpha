@@ -5,7 +5,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.staypoint.admin.AdminDtos.AdminReservation;
@@ -20,6 +23,7 @@ import com.staypoint.admin.AdminDtos.CalendarDay;
 import com.staypoint.admin.AdminDtos.InventoryMismatch;
 import com.staypoint.admin.AdminDtos.InventoryRequest;
 import com.staypoint.admin.AdminDtos.Page;
+import com.staypoint.admin.AdminDtos.PaymentCancelFailureRecord;
 import com.staypoint.admin.AdminDtos.PaymentCancelIssue;
 import com.staypoint.admin.AdminDtos.PaymentCancelRetryResult;
 import com.staypoint.admin.AdminDtos.RateRequest;
@@ -93,6 +97,23 @@ public class AdminController {
 		PaymentCancel cancel = cancelRetryService.retryManually(cancelId);
 		return new PaymentCancelRetryResult(cancel.getId(), cancel.getStatus().name(), cancel.getAttemptCount(),
 				cancel.getLastError());
+	}
+
+	/** 자동 환불 실패 기록 (T22). 발생일 기준, 기간을 안 주면 최근 30일(오늘 포함). */
+	@GetMapping("/payment-cancel-failures")
+	public List<PaymentCancelFailureRecord> paymentCancelFailures(
+			@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate from,
+			@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate to) {
+		LocalDate end = to != null ? to : LocalDate.now(clock);
+		LocalDate start = from != null ? from : end.minusDays(29);
+		return issueService.paymentCancelFailures(start, end);
+	}
+
+	/** 실패 기록 삭제 (T22). 환불이 끝난 건만 — 미해결이면 409 INVALID_STATE, 없으면 404. */
+	@DeleteMapping("/payment-cancel-failures/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void deletePaymentCancelFailure(@PathVariable Long id) {
+		issueService.deletePaymentCancelFailure(id);
 	}
 
 	/** 재고 불일치 감지. 기간을 안 주면 오늘부터 1년. */

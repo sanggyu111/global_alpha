@@ -169,3 +169,18 @@ export type PropertySearch = {
   guests: number;
   properties: PropertyWithRooms[];
 };
+
+// 자동 환불 실패 기록 (T22) — cancelStatus 가 해결 여부: SUCCEEDED 해결됨 · PENDING 자동 재시도 중 · MANUAL_REVIEW 미해결
+export type PaymentCancelFailureRecord = {
+  id: number;
+  paymentCancelId: number;
+  reason: "USER_CANCEL" | "COMPENSATION";
+  cancelStatus: "PENDING" | "SUCCEEDED" | "MANUAL_REVIEW";
+  attemptNo: number;
+  errorCode: string;
+  httpStatus: number | null;
+  errorMessage: string | null;
+  occurredAt: string;
+  reservationId: number;
+  reservationNo: string;
+};

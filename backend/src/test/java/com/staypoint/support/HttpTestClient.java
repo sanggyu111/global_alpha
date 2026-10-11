@@ -27,6 +27,20 @@ public class HttpTestClient {
 		}
 	}
 
+	public Response get(String path) {
+		return exchange(client.get().uri(path).retrieve());
+	}
+
+	public Response delete(String path) {
+		return exchange(client.delete().uri(path).retrieve());
+	}
+
+	private static Response exchange(RestClient.ResponseSpec spec) {
+		ResponseEntity<String> response = spec.onStatus(status -> true, (request, res) -> {
+		}).toEntity(String.class);
+		return new Response(response.getStatusCode().value(), response.getBody());
+	}
+
 	public Response post(String path, Map<String, String> headers, String jsonBody) {
 		RestClient.RequestBodySpec spec = client.post().uri(path)
 				.headers(h -> headers.forEach(h::add))

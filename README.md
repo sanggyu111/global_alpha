@@ -103,9 +103,9 @@ npm run lint && npm run build # 타입 체크 포함
 | PG 타임아웃 | "응답 지연 5초" (백엔드 PG 읽기 타임아웃 3초) → 처리 중 → 웹훅/재조회로 확정 |
 | 마지막 1실 경쟁 | "스테이포인트 제주 애월 / 독채 풀빌라" 는 재고 1실. 두 사용자 ID 로 같은 날짜 예약 → 한 명만 성공 |
 | 취소·환불 | 상단 "내 예약" → 상세 → 지금 취소 시 환불 예정액 확인 → 예약 취소 |
-| **환불 실패 → 운영자 확인** | 확정 예약 상세 → "데모: 모의 PG 환불 결과" 에서 고른 뒤 예약 취소 → 상세의 환불 상태가 **빨간색**(환불 진행 중 / 운영자 확인 중)으로 바뀐다 → 상단 "관리자" → "확인 필요". **PG 거절(4xx)** 은 즉시 "자동 환불 실패(MANUAL_REVIEW)" 에 노출 → "수동 재시도" → 상세에 "환불 완료". **PG 장애 1회** 는 "자동 재시도 중" 에 보였다가 약 1분 뒤 환불 완료. **PG 장애 5회** 는 1·2·4·8분 간격 재시도를 모두 실패해 약 15분 뒤 MANUAL_REVIEW → 수동 재시도로 환불 완료 |
+| **환불 실패 → 운영자 확인** | 확정 예약 상세 → "데모: 모의 PG 환불 결과" 에서 고른 뒤 예약 취소 → 상세의 환불 상태가 **빨간색**(환불 진행 중 / 운영자 확인 중)으로 바뀐다 → 상단 "관리자" → "확인 필요". **PG 거절(4xx)** 은 즉시 "자동 환불 실패(MANUAL_REVIEW)" 에 노출 → "수동 재시도" → 상세에 "환불 완료". **PG 장애 1회** 는 "자동 재시도 중" 에 보였다가 약 1분 뒤 환불 완료. **PG 장애 5회** 는 1·2·4·8분 간격 재시도를 모두 실패해 약 15분 뒤 MANUAL_REVIEW → 수동 재시도로 환불 완료. 어느 경우든 실패한 회차는 "자동 환불 실패 기록" 에 발생 시각·오류 코드(`PG_5XX`·`PG_REJECTED` 등)·해결 여부와 함께 남고, 환불이 끝난 건의 기록만 삭제할 수 있다 (T22) |
 | 선점 만료 | 결제하지 않고 10분 경과 → 스케줄러가 CANCELED(HOLD_EXPIRED) + 재고 복원 |
-| 관리자 | 상단 "관리자" → 예약 목록 필터·페이지 / 재고·요금 기간 수정 / 확인 필요(자동 환불 실패·재고 불일치) |
+| 관리자 | 상단 "관리자" → 예약 목록 필터·페이지 / 재고·요금 기간 수정 / 확인 필요(자동 환불 실패·실패 기록·재고 불일치) |
 
 - 사용자 식별은 인증 대신 상단 "사용자 ID" 입력값을 쿠키에 두고 백엔드에 `X-User-Id` 헤더로 보낸다 (과제 명시).
 - 모의 PG 장애는 결제 화면의 선택값 또는 설정으로 주입한다: `mockpg.approve.fail-rate`, `mockpg.approve.delay-ms`, `mockpg.cancel.fail-rate` ([application.yml](backend/src/main/resources/application.yml)). 예: `./gradlew bootRun --args='--mockpg.cancel.fail-rate=1.0'` 로 환불이 계속 실패하는 상황 → 5회 후 관리자 "확인 필요" 에 노출.
@@ -218,7 +218,7 @@ backend/src/main/java/com/staypoint/
 
 ## 데이터 모델
 
-스키마의 단일 출처는 [db/migration](db/migration) (`V1__init_schema.sql`, T20 의 `V2__mockpg_cancel_fault.sql`). 정합성은 애플리케이션 코드만 믿지 않고 **DB 제약으로도** 보장한다.
+스키마의 단일 출처는 [db/migration](db/migration) (`V1__init_schema.sql`, T20 의 `V2__mockpg_cancel_fault.sql`, T22 의 `V3__payment_cancel_failure.sql`). 정합성은 애플리케이션 코드만 믿지 않고 **DB 제약으로도** 보장한다.
 
 | 테이블 | 핵심 컬럼 | 정합성을 지키는 제약 |
 |---|---|---|
@@ -229,6 +229,7 @@ backend/src/main/java/com/staypoint/
 | `reservation_history` | from → to, 사유, 주체(actor), 시각 | 모든 상태 전이를 기록 |
 | `payment` | `pg_order_id, pg_tid, amount, canceled_amount, status, idempotency_key` | **UNIQUE(idempotency_key)** ← 결제 연타, **UNIQUE(pg_order_id)** ← 중복 통지, **부분 UNIQUE(reservation_id) WHERE status IN (READY, APPROVED)** ← 다른 키로 동시 결제, CHECK(canceled ≤ amount) |
 | `payment_cancel` | `cancel_amount, reason, status, cancel_key, attempt_count, last_error, next_retry_at` | **UNIQUE(cancel_key)** ← PG 취소 멱등. 이 테이블이 재시도 작업 큐(아웃박스) |
+| `payment_cancel_failure` | `payment_cancel_id, attempt_no, error_code, http_status, error_message, occurred_at` — PG 환불 시도 실패 1회 = 1행 (T22). 해결 여부는 저장하지 않고 `payment_cancel.status` 로 계산 | **UNIQUE(payment_cancel_id, attempt_no)**, CHECK(error_code 목록), INDEX(occurred_at) |
 | `mockpg_payment`, `mockpg_cancel` | 모의 PG 전용. 데모용 `cancel_fail_remaining`·`cancel_fail_type` (결제별 남은 취소 실패 횟수, T20) | UNIQUE(order_id), UNIQUE(cancel_key) ← PG 쪽 멱등, CHECK(cancel_fail_remaining ≥ 0) |
 
 - **숙박일**: `stay_date` 는 체크인 ~ 체크아웃 **전날**. 1박 2일 = 재고 행 1개.
@@ -393,7 +394,7 @@ sequenceDiagram
 
 **취소 · 환불의 경계**: 취소 트랜잭션(예약 잠금 → 승인 결제 잠금 → 환불액 계산 → `payment_cancel` USER_CANCEL 기록 → CANCELED → 재고 복원 → 이력) 커밋 후 PG 환불 1회 시도. **PG 환불이 실패해도 취소는 성공**으로 응답하고 `refundStatus: PENDING` 으로 알린다 — 환불할 금액은 기록에 남아 재시도된다.
 
-**결제 취소 재시도** (`payment_cancel` = 아웃박스): 10초 주기 스케줄러가 `FOR UPDATE SKIP LOCKED` 로 집고 `next_retry_at` 을 1분 미뤄 "처리 중" 표시 후 커밋 → 트랜잭션 밖에서 PG 취소 → 결과 반영. 실패하면 1·2·4·8분 뒤 재시도, **5회째 또는 PG 가 4xx 로 거절하면 `MANUAL_REVIEW`**(무한 재시도 금지) → 관리자 "확인 필요" 화면에 노출, 운영자가 원인 확인 후 수동 재시도(실패하면 다시 MANUAL_REVIEW). 새로 만든 취소 요청도 `next_retry_at` 을 1분 뒤로 두어, 생성 직후의 즉시 시도와 스케줄러가 같은 건을 동시에 시도해 시도 횟수가 두 번 오르는 일을 막는다.
+**결제 취소 재시도** (`payment_cancel` = 아웃박스): 10초 주기 스케줄러가 `FOR UPDATE SKIP LOCKED` 로 집고 `next_retry_at` 을 1분 미뤄 "처리 중" 표시 후 커밋 → 트랜잭션 밖에서 PG 취소 → 결과 반영. 실패하면 1·2·4·8분 뒤 재시도, **5회째 또는 PG 가 4xx 로 거절하면 `MANUAL_REVIEW`**(무한 재시도 금지) → 관리자 "확인 필요" 화면에 노출, 운영자가 원인 확인 후 수동 재시도(실패하면 다시 MANUAL_REVIEW). 실패할 때마다 같은 결과 반영 트랜잭션에서 `payment_cancel_failure` 에 회차·오류 코드를 남겨, 재시도로 결국 환불된 건도 실패 이력이 사라지지 않는다 (T22). 새로 만든 취소 요청도 `next_retry_at` 을 1분 뒤로 두어, 생성 직후의 즉시 시도와 스케줄러가 같은 건을 동시에 시도해 시도 횟수가 두 번 오르는 일을 막는다.
 
 > "5번 실패하면 그 돈은?" → 고객 돈은 PG 에 승인 상태로 남아 있고 시스템에는 MANUAL_REVIEW 로 기록된다. 돈이 사라지는 경로는 없고, 운영자가 반드시 보게 되는 경로만 있다.
 
