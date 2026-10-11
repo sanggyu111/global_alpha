@@ -58,3 +58,11 @@ export const STATUS_LABEL: Record<string, string> = {
   COMPLETED: "이용 완료",
   CANCELED: "취소됨",
 };
+
+/** 결제 상태 (T25). 예약 취소 직후 환불이 끝나기 전에는 결제가 아직 "승인" 이다 — 환불이 완료되면 "취소(환불)됨". */
+export const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  READY: "결과 확인 중",
+  APPROVED: "승인",
+  FAILED: "실패",
+  CANCELED: "취소(환불)됨",
+};

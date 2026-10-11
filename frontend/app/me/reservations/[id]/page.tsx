@@ -3,6 +3,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import {
   CANCEL_REASON_LABEL,
+  PAYMENT_STATUS_LABEL,
   REFUND_POLICY_TEXT,
   REFUND_PROBLEM_NOTICE,
   REFUND_STATUS_LABEL,
@@ -61,7 +62,7 @@ export default async function MyReservationPage({ params }: { params: Promise<{ 
         <div className="card">
           <h2>결제</h2>
           <div>
-            상태 {r.payment.status} · 금액 {won(r.payment.amount)}
+            상태 {PAYMENT_STATUS_LABEL[r.payment.status] ?? r.payment.status} · 금액 {won(r.payment.amount)}
             {r.payment.canceledAmount > 0 && <> · 취소(환불)된 금액 {won(r.payment.canceledAmount)}</>}
           </div>
           {r.payment.failReason && <div className="muted">{r.payment.failReason}</div>}
