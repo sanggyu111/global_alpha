@@ -641,6 +641,17 @@ const LOG = [
     cause: "payment_cancel 에 last_error 한 줄만 있어 재시도로 성공한 건은 실패 흔적이 사라짐. 불일치 문구가 내부 용어(정답·활성 예약·booked_count) 위주.",
     resolution: "사용자와 협의해 추천안 확정: 해결 여부는 payment_cancel.status 로 계산(저장 안 함), 삭제는 해결된 기록만, 운영자 수동 해결 기능 없음, 이전 데이터는 채우지 않음. ③ 은 README Q6 의 구현이라 기능 유지하고 문구·이름 표시만 개선. 설계 8.4·3.2·7장·12장(T21·T22) 반영.",
     refs: ["docs/02-design.md §8.4"],
+  },  {
+    id: "L059",
+    at: "2026-10-11",
+    task: "T22",
+    type: "decision",
+    status: "resolved",
+    title: "T22 를 main 이 아니라 T21 브랜치에서 분기",
+    detail: "규칙은 최신 main 에서 Task 브랜치를 만드는 것이지만, T21 이 리뷰 대기(미병합) 상태에서 T22 를 이어서 진행.",
+    cause: "두 Task 가 같은 파일(관리자 확인 필요 화면, progress.html 의 T21·T22 항목, README 데모 시나리오 줄)을 고쳐 main 에서 따로 분기하면 병합 충돌이 확실함.",
+    resolution: "T22 를 feat/T21-refund-status-highlight 위에서 분기. 병합은 T21 → T22 순서로 하면 충돌 없음.",
+    refs: ["docs/progress.html T22"],
   },
 ];
 </script>
