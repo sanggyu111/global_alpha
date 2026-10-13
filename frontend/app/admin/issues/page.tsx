@@ -3,6 +3,8 @@ import { api } from "@/lib/api";
 import { dateTime, won } from "@/lib/format";
 import type { InventoryMismatch, PaymentCancelIssue } from "@/lib/types";
 
+const CANCEL_REASON: Record<string, string> = { COMPENSATION: "확정 실패 보상 취소" };
+
 /**
  * 운영자 확인 대상 (FR-UI-5, README Q6).
  * ① 자동 환불(PG 취소)이 재시도를 다 쓰고도 실패했거나 PG 가 거절한 건 — 고객 돈이 아직 돌아가지 않았다
@@ -19,131 +21,196 @@ export default async function AdminIssuesPage() {
     <>
       <h1>확인 필요</h1>
 
-      <h2>자동 환불 재시도 중 (PENDING)</h2>
-      <p className="muted">
-        PG 일시 장애로 환불이 실패해 1·2·4·8분 간격으로 자동 재시도 중인 건입니다. 5회째도 실패하면 아래 운영자 확인
-        목록으로 넘어갑니다. 이 화면은 새로고침해야 갱신됩니다.
-      </p>
+      <div className="section-title">
+        <h2>자동 환불 재시도 중</h2>
+        {retrying.ok && <span className="badge">{retrying.data.length}건</span>}
+      </div>
+      <details className="fold">
+        <summary>설명</summary>
+        <p className="muted">
+          PG 일시 장애로 환불이 실패해 1·2·4·8분 간격으로 자동 재시도 중인 건입니다. 5회째도 실패하면 아래 운영자 확인
+          목록으로 넘어갑니다. 이 화면은 새로고침해야 갱신됩니다.
+        </p>
+      </details>
       {!retrying.ok ? (
-        <p className="error">{retrying.error.message}</p>
+        <p className="notice notice-error">{retrying.error.message}</p>
       ) : retrying.data.length === 0 ? (
-        <p>없음</p>
+        <p className="card empty">없음</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>예약</th>
-              <th>사유</th>
-              <th>금액</th>
-              <th>시도</th>
-              <th>다음 시도</th>
-              <th>마지막 오류</th>
-            </tr>
-          </thead>
-          <tbody>
-            {retrying.data.map((c) => (
-              <tr key={c.id}>
-                <td>{c.reservationNo}</td>
-                <td>{c.reason === "COMPENSATION" ? "확정 실패 보상 취소" : "사용자 취소 환불"}</td>
-                <td>{won(c.cancelAmount)}</td>
-                <td>{c.attemptCount}회</td>
-                <td>{dateTime(c.nextRetryAt)}</td>
-                <td className="muted">{c.lastError ?? "-"}</td>
+        <div className="table-wrap">
+          <table className="table-stack">
+            <thead>
+              <tr>
+                <th>예약</th>
+                <th>사유</th>
+                <th>금액</th>
+                <th>시도</th>
+                <th>다음 시도</th>
+                <th>마지막 오류</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {retrying.data.map((c) => (
+                <tr key={c.id}>
+                  <td data-label="예약">
+                    <span className="strong">{c.reservationNo}</span>
+                  </td>
+                  <td data-label="사유">
+                    <span>{CANCEL_REASON[c.reason] ?? "사용자 취소 환불"}</span>
+                  </td>
+                  <td data-label="금액" className="nowrap">
+                    <span>{won(c.cancelAmount)}</span>
+                  </td>
+                  <td data-label="시도" className="nowrap">
+                    <span>{c.attemptCount}회</span>
+                  </td>
+                  <td data-label="다음 시도" className="nowrap">
+                    <span>{dateTime(c.nextRetryAt)}</span>
+                  </td>
+                  <td data-label="마지막 오류" className="muted">
+                    <span>{c.lastError ?? "-"}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <h2>자동 환불 실패 (MANUAL_REVIEW)</h2>
+      <div className="section-title">
+        <h2>자동 환불 실패 (운영자 확인)</h2>
+        {cancels.ok && (
+          <span className={`badge ${cancels.data.length > 0 ? "badge-PENDING" : ""}`}>{cancels.data.length}건</span>
+        )}
+      </div>
       {!cancels.ok ? (
-        <p className="error">{cancels.error.message}</p>
+        <p className="notice notice-error">{cancels.error.message}</p>
       ) : cancels.data.length === 0 ? (
-        <p>없음</p>
+        <p className="card empty">없음</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>예약</th>
-              <th>사유</th>
-              <th>금액</th>
-              <th>시도</th>
-              <th>마지막 오류</th>
-              <th>PG</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {cancels.data.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  {c.reservationNo}
-                  <div className="muted">{dateTime(c.createdAt)}</div>
-                </td>
-                <td>{c.reason === "COMPENSATION" ? "확정 실패 보상 취소" : "사용자 취소 환불"}</td>
-                <td>{won(c.cancelAmount)}</td>
-                <td>{c.attemptCount}회</td>
-                <td className="muted">{c.lastError}</td>
-                <td className="muted">
-                  {c.pgOrderId}
-                  <div>{c.pgTid}</div>
-                </td>
-                <td>
-                  {/* 실패하면 다시 이 목록에 남는다 (자동 재시도는 다시 시작되지 않음) */}
-                  <form action={retryPaymentCancel}>
-                    <input type="hidden" name="cancelId" value={c.id} />
-                    <button type="submit">수동 재시도</button>
-                  </form>
-                </td>
+        <div className="table-wrap">
+          <table className="table-stack">
+            <thead>
+              <tr>
+                <th>예약</th>
+                <th>사유</th>
+                <th>금액</th>
+                <th>시도</th>
+                <th>마지막 오류</th>
+                <th>PG</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {cancels.data.map((c) => (
+                <tr key={c.id}>
+                  <td data-label="예약">
+                    <div>
+                      <span className="strong">{c.reservationNo}</span>
+                      <div className="muted">{dateTime(c.createdAt)}</div>
+                    </div>
+                  </td>
+                  <td data-label="사유">
+                    <span>{CANCEL_REASON[c.reason] ?? "사용자 취소 환불"}</span>
+                  </td>
+                  <td data-label="금액" className="nowrap">
+                    <span>{won(c.cancelAmount)}</span>
+                  </td>
+                  <td data-label="시도" className="nowrap">
+                    <span>{c.attemptCount}회</span>
+                  </td>
+                  <td data-label="마지막 오류" className="muted">
+                    <span>{c.lastError}</span>
+                  </td>
+                  <td data-label="PG" className="muted">
+                    <div>
+                      {c.pgOrderId}
+                      <div>{c.pgTid}</div>
+                    </div>
+                  </td>
+                  <td data-label="">
+                    {/* 실패하면 다시 이 목록에 남는다 (자동 재시도는 다시 시작되지 않음) */}
+                    <form action={retryPaymentCancel}>
+                      <input type="hidden" name="cancelId" value={c.id} />
+                      <button type="submit" className="btn-sm">
+                        수동 재시도
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <h2>재고 불일치 (오늘부터 1년)</h2>
-      <p className="muted">
-        날짜별 &quot;판매된 객실 수&quot;가 실제 예약 건수와 다른 날짜입니다. 정상이면 항상 비어 있습니다. 실제 예약
-        건수(결제 대기·확정·이용 완료)가 기준이며, 원인(DB 직접 수정, 버그 등)을 확인한 뒤 [재계산]을 누르면 판매된
-        객실 수를 실제 예약 건수로 고칩니다.
-      </p>
+      <div className="section-title">
+        <h2>재고 불일치 (오늘부터 1년)</h2>
+        {mismatches.ok && (
+          <span className={`badge ${mismatches.data.length > 0 ? "badge-PENDING" : ""}`}>
+            {mismatches.data.length}건
+          </span>
+        )}
+      </div>
+      <details className="fold">
+        <summary>설명</summary>
+        <p className="muted">
+          날짜별 &quot;판매된 객실 수&quot;가 실제 예약 건수와 다른 날짜입니다. 정상이면 항상 비어 있습니다. 실제 예약
+          건수(결제 대기·확정·이용 완료)가 기준이며, 원인(DB 직접 수정, 버그 등)을 확인한 뒤 [재계산]을 누르면 판매된
+          객실 수를 실제 예약 건수로 고칩니다.
+        </p>
+      </details>
       {!mismatches.ok ? (
-        <p className="error">{mismatches.error.message}</p>
+        <p className="notice notice-error">{mismatches.error.message}</p>
       ) : mismatches.data.length === 0 ? (
-        <p>없음</p>
+        <p className="card empty">없음</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>숙소 / 객실</th>
-              <th>날짜</th>
-              <th>전체 객실</th>
-              <th>판매된 객실 수</th>
-              <th>실제 예약 건수</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {mismatches.data.map((m) => (
-              <tr key={`${m.roomTypeId}-${m.stayDate}`}>
-                <td>
-                  {m.propertyName} / {m.roomTypeName}
-                </td>
-                <td>{m.stayDate}</td>
-                <td>{m.totalCount}</td>
-                <td className="error">{m.bookedCount}</td>
-                <td>{m.expectedBookedCount}</td>
-                <td>
-                  <form action={recountInventory}>
-                    <input type="hidden" name="roomTypeId" value={m.roomTypeId} />
-                    <input type="hidden" name="stayDate" value={m.stayDate} />
-                    <button type="submit">재계산</button>
-                  </form>
-                </td>
+        <div className="table-wrap">
+          <table className="table-stack">
+            <thead>
+              <tr>
+                <th>숙소 / 객실</th>
+                <th>날짜</th>
+                <th>전체 객실</th>
+                <th>판매된 객실 수</th>
+                <th>실제 예약 건수</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {mismatches.data.map((m) => (
+                <tr key={`${m.roomTypeId}-${m.stayDate}`}>
+                  <td data-label="숙소 / 객실">
+                    <span>
+                      {m.propertyName} / {m.roomTypeName}
+                    </span>
+                  </td>
+                  <td data-label="날짜" className="nowrap">
+                    <span>{m.stayDate}</span>
+                  </td>
+                  <td data-label="전체 객실">
+                    <span>{m.totalCount}</span>
+                  </td>
+                  <td data-label="판매된 객실 수" className="error strong">
+                    <span>{m.bookedCount}</span>
+                  </td>
+                  <td data-label="실제 예약 건수">
+                    <span>{m.expectedBookedCount}</span>
+                  </td>
+                  <td data-label="">
+                    <form action={recountInventory}>
+                      <input type="hidden" name="roomTypeId" value={m.roomTypeId} />
+                      <input type="hidden" name="stayDate" value={m.stayDate} />
+                      <button type="submit" className="btn-sm">
+                        재계산
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );

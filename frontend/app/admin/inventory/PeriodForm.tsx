@@ -13,14 +13,14 @@ export function PeriodForm({ kind, roomTypeId, from, to }: Props) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, { error: null });
 
   return (
-    <form action={formAction} className="inline">
+    <form action={formAction} className="form-grid">
       <input type="hidden" name="roomTypeId" value={roomTypeId} />
       <label>
-        from
+        시작일
         <input type="date" name="from" defaultValue={from} required />
       </label>
       <label>
-        to
+        종료일
         <input type="date" name="to" defaultValue={to} required />
       </label>
       {kind === "inventory" ? (
@@ -34,10 +34,12 @@ export function PeriodForm({ kind, roomTypeId, from, to }: Props) {
           <input type="number" name="price" min={0} step={1000} required />
         </label>
       )}
-      <button type="submit" disabled={pending}>
-        {kind === "inventory" ? "재고 적용" : "요금 적용"}
-      </button>
-      {state.error && <span className="error">{state.error}</span>}
+      <div className="actions">
+        <button type="submit" className="btn" disabled={pending}>
+          {kind === "inventory" ? "재고 적용" : "요금 적용"}
+        </button>
+      </div>
+      {state.error && <p className="notice notice-error">{state.error}</p>}
     </form>
   );
 }

@@ -1,7 +1,8 @@
 import Link from "next/link";
 
+import { StatusBadge } from "@/app/StatusBadge";
 import { api } from "@/lib/api";
-import { STATUS_LABEL, dateTime, won } from "@/lib/format";
+import { CANCEL_REASON_LABEL, STATUS_LABEL, dateTime, won } from "@/lib/format";
 import type { AdminReservation, Page, PropertySummary } from "@/lib/types";
 
 type Search = { status?: string; propertyId?: string; from?: string; to?: string; page?: string };
@@ -35,7 +36,7 @@ export default async function AdminReservationsPage({ searchParams }: { searchPa
   return (
     <>
       <h1>예약 목록</h1>
-      <form className="inline card">
+      <form className="card form-grid">
         <label>
           상태
           <select name="status" defaultValue={search.status ?? ""}>
@@ -60,65 +61,99 @@ export default async function AdminReservationsPage({ searchParams }: { searchPa
           </select>
         </label>
         <label>
-          체크인 from
+          체크인 시작
           <input type="date" name="from" defaultValue={search.from} />
         </label>
         <label>
-          체크인 to
+          체크인 끝
           <input type="date" name="to" defaultValue={search.to} />
         </label>
-        <button type="submit">조회</button>
-        <Link href="/admin/reservations">초기화</Link>
+        <div className="actions">
+          <button type="submit" className="btn">
+            조회
+          </button>
+          <Link href="/admin/reservations" className="btn btn-secondary">
+            초기화
+          </Link>
+        </div>
       </form>
 
       {!reservations.ok ? (
-        <p className="error">{reservations.error.message}</p>
+        <p className="notice notice-error">{reservations.error.message}</p>
       ) : (
         <>
           <p className="muted">
             총 {reservations.data.totalElements}건 · {page + 1} / {Math.max(1, reservations.data.totalPages)} 페이지
           </p>
-          <table>
-            <thead>
-              <tr>
-                <th>예약번호</th>
-                <th>사용자</th>
-                <th>숙소 / 객실</th>
-                <th>일정</th>
-                <th>금액</th>
-                <th>상태</th>
-                <th>생성</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reservations.data.content.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.reservationNo}</td>
-                  <td>
-                    {r.userId}
-                    <div className="muted">{r.guestName}</div>
-                  </td>
-                  <td>
-                    {r.propertyName}
-                    <div className="muted">{r.roomTypeName}</div>
-                  </td>
-                  <td>
-                    {r.checkIn} ~ {r.checkOut}
-                  </td>
-                  <td>{won(r.totalAmount)}</td>
-                  <td>
-                    {STATUS_LABEL[r.status]}
-                    {r.cancelReason && <div className="muted">{r.cancelReason}</div>}
-                  </td>
-                  <td className="muted">{dateTime(r.createdAt)}</td>
+          <div className="table-wrap">
+            <table className="table-stack">
+              <thead>
+                <tr>
+                  <th>예약번호</th>
+                  <th>사용자</th>
+                  <th>숙소 / 객실</th>
+                  <th>일정</th>
+                  <th>금액</th>
+                  <th>상태</th>
+                  <th>생성</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <p>
-            {page > 0 && <Link href={pageLink(page - 1)}>← 이전</Link>}{" "}
-            {page + 1 < reservations.data.totalPages && <Link href={pageLink(page + 1)}>다음 →</Link>}
-          </p>
+              </thead>
+              <tbody>
+                {reservations.data.content.map((r) => (
+                  <tr key={r.id}>
+                    <td data-label="예약번호" className="nowrap">
+                      <span className="strong">{r.reservationNo}</span>
+                    </td>
+                    <td data-label="사용자">
+                      <div>
+                        {r.userId}
+                        <div className="muted">{r.guestName}</div>
+                      </div>
+                    </td>
+                    <td data-label="숙소 / 객실">
+                      <div>
+                        {r.propertyName}
+                        <div className="muted">{r.roomTypeName}</div>
+                      </div>
+                    </td>
+                    <td data-label="일정" className="nowrap">
+                      <span>
+                        {r.checkIn} ~ {r.checkOut}
+                      </span>
+                    </td>
+                    <td data-label="금액" className="nowrap">
+                      <span>{won(r.totalAmount)}</span>
+                    </td>
+                    <td data-label="상태">
+                      <div>
+                        <StatusBadge status={r.status} />
+                        {r.cancelReason && (
+                          <div className="muted">{CANCEL_REASON_LABEL[r.cancelReason] ?? r.cancelReason}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td data-label="생성" className="muted nowrap">
+                      <span>{dateTime(r.createdAt)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="pager">
+            {page > 0 ? (
+              <Link href={pageLink(page - 1)} className="btn btn-secondary btn-sm">
+                ← 이전
+              </Link>
+            ) : (
+              <span />
+            )}
+            {page + 1 < reservations.data.totalPages && (
+              <Link href={pageLink(page + 1)} className="btn btn-secondary btn-sm">
+                다음 →
+              </Link>
+            )}
+          </div>
         </>
       )}
     </>

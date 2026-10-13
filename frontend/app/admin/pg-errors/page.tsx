@@ -48,20 +48,25 @@ export default async function PgErrorsPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <h1>PG 오류</h1>
-      <p className="muted">
-        결제 승인과 환불에서 PG 호출이 실패할 때마다 남는 기록입니다. 나중에 결과가 정상으로 확정돼도 기록은 남습니다.
-        &quot;현재 상태&quot;는 그 결제·환불의 지금 상태이며, 결과가 확정된(해결된) 기록만 삭제할 수 있습니다.
-      </p>
+      <details className="fold">
+        <summary>설명</summary>
+        <p className="muted">
+          결제 승인과 환불에서 PG 호출이 실패할 때마다 남는 기록입니다. 나중에 결과가 정상으로 확정돼도 기록은 남습니다.
+          &quot;현재 상태&quot;는 그 결제·환불의 지금 상태이며, 결과가 확정된(해결된) 기록만 삭제할 수 있습니다.
+        </p>
+      </details>
 
-      <form className="inline card">
+      <form className="card form-grid">
         <label>
-          발생일 <input type="date" name="from" defaultValue={from} />
+          발생일 시작
+          <input type="date" name="from" defaultValue={from} />
         </label>
         <label>
-          ~ <input type="date" name="to" defaultValue={to} />
+          발생일 끝
+          <input type="date" name="to" defaultValue={to} />
         </label>
         <label>
-          종류{" "}
+          종류
           <select name="kind" defaultValue={search.kind ?? ""}>
             <option value="">전체</option>
             <option value="APPROVE">결제 승인</option>
@@ -69,7 +74,7 @@ export default async function PgErrorsPage({ searchParams }: { searchParams: Pro
           </select>
         </label>
         <label>
-          오류 코드{" "}
+          오류 코드
           <select name="code" defaultValue={search.code ?? ""}>
             <option value="">전체</option>
             {CODES.map(([code]) => (
@@ -79,74 +84,94 @@ export default async function PgErrorsPage({ searchParams }: { searchParams: Pro
             ))}
           </select>
         </label>
-        <button type="submit">조회</button>
+        <div className="actions">
+          <button type="submit" className="btn">
+            조회
+          </button>
+        </div>
       </form>
 
       {!errors.ok ? (
-        <p className="error">{errors.error.message}</p>
+        <p className="notice notice-error">{errors.error.message}</p>
       ) : errors.data.length === 0 ? (
-        <p>없음</p>
+        <p className="card empty">없음</p>
       ) : (
         <>
           <Summary errors={errors.data} />
-          <table>
-            <thead>
-              <tr>
-                <th>발생 시각</th>
-                <th>종류</th>
-                <th>예약</th>
-                <th>오류 코드</th>
-                <th>메시지</th>
-                <th>현재 상태</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {errors.data.map((e) => (
-                <tr key={`${e.kind}-${e.id}`}>
-                  <td>{dateTime(e.occurredAt)}</td>
-                  <td>
-                    {KIND_LABEL[e.kind]}
-                    {e.attemptNo && <div className="muted">{e.attemptNo}회차</div>}
-                  </td>
-                  <td>{e.reservationNo}</td>
-                  <td>
-                    {e.errorCode}
-                    {e.httpStatus && <div className="muted">HTTP {e.httpStatus}</div>}
-                  </td>
-                  <td className="muted">{e.errorMessage ?? "-"}</td>
-                  <td>
-                    {STATUS_LABEL[e.kind][e.currentStatus] ?? e.currentStatus}
-                    <div className={resolutionClass(e)}>{resolutionLabel(e)}</div>
-                  </td>
-                  <td>
-                    {e.resolved && (
-                      <form action={deletePgError}>
-                        <input type="hidden" name="kind" value={e.kind} />
-                        <input type="hidden" name="id" value={e.id} />
-                        <button type="submit">삭제</button>
-                      </form>
-                    )}
-                  </td>
+          <div className="table-wrap">
+            <table className="table-stack">
+              <thead>
+                <tr>
+                  <th>발생 시각</th>
+                  <th>종류</th>
+                  <th>예약</th>
+                  <th>오류 코드</th>
+                  <th>메시지</th>
+                  <th>현재 상태</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {errors.data.map((e) => (
+                  <tr key={`${e.kind}-${e.id}`}>
+                    <td data-label="발생 시각" className="nowrap">
+                      <span>{dateTime(e.occurredAt)}</span>
+                    </td>
+                    <td data-label="종류">
+                      <div>
+                        {KIND_LABEL[e.kind]}
+                        {e.attemptNo && <div className="muted">{e.attemptNo}회차</div>}
+                      </div>
+                    </td>
+                    <td data-label="예약" className="nowrap">
+                      <span className="strong">{e.reservationNo}</span>
+                    </td>
+                    <td data-label="오류 코드" className="nowrap">
+                      <div>
+                        {e.errorCode}
+                        {e.httpStatus && <div className="muted">HTTP {e.httpStatus}</div>}
+                      </div>
+                    </td>
+                    <td data-label="메시지" className="muted">
+                      <span>{e.errorMessage ?? "-"}</span>
+                    </td>
+                    <td data-label="현재 상태">
+                      <div>
+                        {STATUS_LABEL[e.kind][e.currentStatus] ?? e.currentStatus}
+                        <div className={resolutionClass(e)}>{resolutionLabel(e)}</div>
+                      </div>
+                    </td>
+                    <td data-label="">
+                      {e.resolved && (
+                        <form action={deletePgError}>
+                          <input type="hidden" name="kind" value={e.kind} />
+                          <input type="hidden" name="id" value={e.id} />
+                          <button type="submit" className="btn-secondary btn-sm">
+                            삭제
+                          </button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {errors.data.length >= 500 && <p className="muted">최근 500건만 보입니다. 기간을 좁혀 주세요.</p>}
         </>
       )}
 
-      <h2>오류 코드</h2>
-      <table>
-        <tbody>
+      <details className="fold">
+        <summary>오류 코드 설명</summary>
+        <ul className="rows">
           {CODES.map(([code, meaning]) => (
-            <tr key={code}>
-              <td>{code}</td>
-              <td className="muted">{meaning}</td>
-            </tr>
+            <li key={code}>
+              <span className="strong">{code}</span>
+              <span className="muted">{meaning}</span>
+            </li>
           ))}
-        </tbody>
-      </table>
+        </ul>
+      </details>
     </>
   );
 }

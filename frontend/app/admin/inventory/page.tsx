@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { api } from "@/lib/api";
-import { seoulDate, won } from "@/lib/format";
+import { seoulDate, shortDate, won } from "@/lib/format";
 import type { CalendarDay, PropertyDetail, PropertySummary } from "@/lib/types";
 
 import { PeriodForm } from "./PeriodForm";
@@ -31,8 +31,8 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
   return (
     <>
       <h1>재고 · 요금</h1>
-      <form className="inline card">
-        <label>
+      <form className="card form-grid">
+        <label className="wide">
           객실 타입
           <select name="roomTypeId" defaultValue={roomTypeId}>
             {roomTypes.map((rt) => (
@@ -43,56 +43,66 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
           </select>
         </label>
         <label>
-          from
+          시작일
           <input type="date" name="from" defaultValue={from} required />
         </label>
         <label>
-          to
+          종료일
           <input type="date" name="to" defaultValue={to} required />
         </label>
-        <button type="submit">보기</button>
+        <div className="actions">
+          <button type="submit" className="btn">
+            보기
+          </button>
+        </div>
       </form>
 
       {roomTypeId && (
         <div className="card">
           <h2>기간 일괄 수정</h2>
-          <p className="muted">
-            기간은 양 끝 포함. 재고는 이미 예약된 수보다 줄일 수 없고(하나라도 해당하면 전체 거부), 요금 변경은 이미 만든
-            예약 금액에 영향을 주지 않습니다.
-          </p>
-          <PeriodForm kind="inventory" roomTypeId={roomTypeId} from={from} to={to} />
-          <PeriodForm kind="rates" roomTypeId={roomTypeId} from={from} to={to} />
+          <details className="fold">
+            <summary>수정 규칙</summary>
+            <p className="muted">
+              기간은 양 끝 포함. 재고는 이미 예약된 수보다 줄일 수 없고(하나라도 해당하면 전체 거부), 요금 변경은 이미
+              만든 예약 금액에 영향을 주지 않습니다.
+            </p>
+          </details>
+          <div className="stack">
+            <PeriodForm kind="inventory" roomTypeId={roomTypeId} from={from} to={to} />
+            <PeriodForm kind="rates" roomTypeId={roomTypeId} from={from} to={to} />
+          </div>
         </div>
       )}
 
-      {calendar && !calendar.ok && <p className="error">{calendar.error.message}</p>}
+      {calendar && !calendar.ok && <p className="notice notice-error">{calendar.error.message}</p>}
       {calendar?.ok && (
-        <table>
-          <thead>
-            <tr>
-              <th>날짜</th>
-              <th>재고</th>
-              <th>예약</th>
-              <th>잔여</th>
-              <th>1박 요금</th>
-            </tr>
-          </thead>
-          <tbody>
-            {calendar.data.map((day) => (
-              <tr key={day.date}>
-                <td>{day.date}</td>
-                <td>{day.totalCount ?? <span className="muted">미등록</span>}</td>
-                <td>{day.bookedCount ?? "-"}</td>
-                <td>{day.available ?? "-"}</td>
-                <td>{day.price == null ? <span className="muted">미등록</span> : won(day.price)}</td>
+        <div className="table-wrap">
+          {/* 날짜별 한 줄 — 칸이 적어 좁은 화면에서도 표 그대로 둔다 */}
+          <table>
+            <thead>
+              <tr>
+                <th>날짜</th>
+                <th>재고</th>
+                <th>예약</th>
+                <th>잔여</th>
+                <th>1박 요금</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {calendar.data.map((day) => (
+                <tr key={day.date}>
+                  <td>{shortDate(day.date)}</td>
+                  <td>{day.totalCount ?? <span className="muted">미등록</span>}</td>
+                  <td>{day.bookedCount ?? "-"}</td>
+                  <td>{day.available ?? "-"}</td>
+                  <td>{day.price == null ? <span className="muted">미등록</span> : won(day.price)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      <p>
-        <Link href="/admin/issues">재고 불일치 · 확인 필요 →</Link>
-      </p>
+      <Link href="/admin/issues">재고 불일치 · 확인 필요 →</Link>
     </>
   );
 }
