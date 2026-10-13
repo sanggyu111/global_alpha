@@ -71,41 +71,48 @@ export function PayPanel({ reservationId }: { reservationId: number }) {
 
   return (
     <div className="card">
-      <fieldset>
-        <legend>데모: 모의 PG 장애 주입</legend>
-        <label>
-          결제 결과
-          {/* 데모는 결과를 예측할 수 있게 항상 승인 / 항상 거절만 둔다 (T24) — 값은 모의 PG 실패율 */}
-          <select value={failRate} onChange={(e) => setFailRate(e.target.value)}>
-            <option value="0">항상 승인</option>
-            <option value="1">항상 거절</option>
-          </select>
-        </label>{" "}
-        <label>
-          응답 지연
-          <select value={delayMs} onChange={(e) => setDelayMs(e.target.value)}>
-            <option value="300">0.3초</option>
-            <option value="2000">2초</option>
-            <option value="5000">5초 (타임아웃 → 처리 중)</option>
-          </select>
-        </label>
-      </fieldset>
-      <p>
-        <button type="button" onClick={pay} disabled={pending || !idempotencyKey}>
-          {pending ? "결제 중…" : "결제하기"}
-        </button>
-      </p>
-      {result?.result === "FAILED" && <p className="error">결제가 거절되었습니다. 다시 시도할 수 있습니다.</p>}
+      {/* 데모 선택지는 접어 두고, 요약에 지금 고른 값을 보여준다 (T28) */}
+      <details className="fold">
+        <summary>
+          데모 PG 설정 · {failRate === "0" ? "항상 승인" : "항상 거절"} · 지연 {Number(delayMs) / 1000}초
+        </summary>
+        <div className="form-grid">
+          <label>
+            결제 결과
+            {/* 데모는 결과를 예측할 수 있게 항상 승인 / 항상 거절만 둔다 (T24) — 값은 모의 PG 실패율 */}
+            <select value={failRate} onChange={(e) => setFailRate(e.target.value)}>
+              <option value="0">항상 승인</option>
+              <option value="1">항상 거절</option>
+            </select>
+          </label>
+          <label>
+            응답 지연
+            <select value={delayMs} onChange={(e) => setDelayMs(e.target.value)}>
+              <option value="300">0.3초</option>
+              <option value="2000">2초</option>
+              <option value="5000">5초 (타임아웃 → 처리 중)</option>
+            </select>
+          </label>
+        </div>
+        <p className="muted mt-12">결제 키(멱등 키): {idempotencyKey ?? "…"}</p>
+      </details>
+      <button type="button" className="btn-block" onClick={pay} disabled={pending || !idempotencyKey}>
+        {pending ? "결제 중…" : "결제하기"}
+      </button>
+      {result?.result === "FAILED" && (
+        <p className="notice notice-error mt-12">결제가 거절되었습니다. 다시 시도할 수 있습니다.</p>
+      )}
       {result?.result === "PROCESSING" && (
-        <p className="muted">
-          결제 결과를 확인하는 중입니다… (버튼을 다시 눌러도 같은 결제로 처리되어 이중 결제되지 않습니다)
+        <p className="notice notice-info mt-12">
+          결제 결과를 확인하는 중입니다… 버튼을 다시 눌러도 같은 결제로 처리되어 이중 결제되지 않습니다.
         </p>
       )}
       {result?.result === "COMPENSATED" && (
-        <p className="error">결제는 승인됐지만 예약을 확정할 수 없어(선점 만료 등) 결제를 자동 취소했습니다.</p>
+        <p className="notice notice-error mt-12">
+          결제는 승인됐지만 예약을 확정할 수 없어(선점 만료 등) 결제를 자동 취소했습니다.
+        </p>
       )}
-      {error && <p className="error">{error}</p>}
-      <p className="muted">결제 키: {idempotencyKey ?? "…"}</p>
+      {error && <p className="notice notice-error mt-12">{error}</p>}
     </div>
   );
 }

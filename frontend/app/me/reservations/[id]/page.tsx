@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { StatusBadge } from "@/app/StatusBadge";
 import { api } from "@/lib/api";
 import {
   CANCEL_REASON_LABEL,
@@ -7,7 +8,6 @@ import {
   REFUND_POLICY_TEXT,
   REFUND_PROBLEM_NOTICE,
   REFUND_STATUS_LABEL,
-  STATUS_LABEL,
   dateTime,
   won,
 } from "@/lib/format";
@@ -23,73 +23,106 @@ export default async function MyReservationPage({ params }: { params: Promise<{ 
   if (!result.ok) {
     return (
       <>
-        <p className="error">{result.error.message}</p>
-        <Link href="/me/reservations">← 내 예약</Link>
+        <p className="notice notice-error">{result.error.message}</p>
+        <Link href="/me/reservations" className="back">
+          ← 내 예약
+        </Link>
       </>
     );
   }
   const r = result.data;
   const cancellable = r.status === "PENDING" || r.status === "CONFIRMED";
+  // 환불이 아직 끝나지 않은 상태만 강조한다 — 완료·환불 없음까지 빨간색이면 강조가 의미를 잃는다
+  const refundProblem = r.refundStatus ? REFUND_PROBLEM_NOTICE[r.refundStatus] : undefined;
 
   return (
     <>
-      <p>
-        <Link href="/me/reservations">← 내 예약</Link>
-      </p>
-      <h1>예약 {r.reservationNo}</h1>
+      <Link href="/me/reservations" className="back">
+        ← 내 예약
+      </Link>
+      <h1>예약 상세</h1>
+
       <div className="card">
-        <p>
-          상태 <strong>{STATUS_LABEL[r.status]}</strong>
-        </p>
-        <div>
-          {r.propertyName} / {r.roomTypeName}
-        </div>
-        <div>
-          {r.checkIn} ~ {r.checkOut} ({r.nights}박) · {r.guestCount}명 · {r.guestName}
-        </div>
-        <div>
-          예약 금액 <strong>{won(r.totalAmount)}</strong>
-        </div>
-        {r.status === "PENDING" && (
-          <div className="muted">
-            결제 기한 {dateTime(r.holdExpiresAt)} · <Link href={`/reservations/${r.id}/pay`}>결제하기</Link>
+        <div className="item-head">
+          <div>
+            <h2>{r.propertyName}</h2>
+            <div className="muted">{r.roomTypeName}</div>
           </div>
-        )}
-        {r.confirmedAt && <div className="muted">확정 {dateTime(r.confirmedAt)}</div>}
+          <StatusBadge status={r.status} />
+        </div>
+        <dl className="kv mt-12">
+          <dt>예약번호</dt>
+          <dd>{r.reservationNo}</dd>
+          <dt>일정</dt>
+          <dd>
+            {r.checkIn} ~ {r.checkOut} ({r.nights}박)
+          </dd>
+          <dt>인원 · 예약자</dt>
+          <dd>
+            {r.guestCount}명 · {r.guestName}
+          </dd>
+          {r.confirmedAt && (
+            <>
+              <dt>확정</dt>
+              <dd>{dateTime(r.confirmedAt)}</dd>
+            </>
+          )}
+        </dl>
+        <div className="total">
+          <span>예약 금액</span>
+          <strong>{won(r.totalAmount)}</strong>
+        </div>
       </div>
+
+      {r.status === "PENDING" && (
+        <div className="card">
+          <p className="notice notice-warn">{dateTime(r.holdExpiresAt)} 까지 결제하지 않으면 예약이 취소됩니다.</p>
+          <Link href={`/reservations/${r.id}/pay`} className="btn btn-block">
+            결제하기
+          </Link>
+        </div>
+      )}
 
       {r.payment && (
         <div className="card">
           <h2>결제</h2>
-          <div>
-            상태 {PAYMENT_STATUS_LABEL[r.payment.status] ?? r.payment.status} · 금액 {won(r.payment.amount)}
-            {r.payment.canceledAmount > 0 && <> · 취소(환불)된 금액 {won(r.payment.canceledAmount)}</>}
-          </div>
-          {r.payment.failReason && <div className="muted">{r.payment.failReason}</div>}
+          <dl className="kv">
+            <dt>상태</dt>
+            <dd>{PAYMENT_STATUS_LABEL[r.payment.status] ?? r.payment.status}</dd>
+            <dt>금액</dt>
+            <dd>{won(r.payment.amount)}</dd>
+            {r.payment.canceledAmount > 0 && (
+              <>
+                <dt>취소(환불)된 금액</dt>
+                <dd>{won(r.payment.canceledAmount)}</dd>
+              </>
+            )}
+          </dl>
+          {r.payment.failReason && <p className="muted mt-12">{r.payment.failReason}</p>}
         </div>
       )}
 
       {r.status === "CANCELED" && (
         <div className="card">
-          <h2>취소</h2>
-          <div>
-            {dateTime(r.canceledAt)} · {CANCEL_REASON_LABEL[r.cancelReason ?? ""] ?? r.cancelReason}
-          </div>
-          <div>
-            환불 금액 <strong>{won(r.refundAmount ?? 0)}</strong>
+          <h2>취소 · 환불</h2>
+          <dl className="kv">
+            <dt>취소</dt>
+            <dd>
+              {dateTime(r.canceledAt)}
+              <div className="muted">{CANCEL_REASON_LABEL[r.cancelReason ?? ""] ?? r.cancelReason}</div>
+            </dd>
+            <dt>환불 금액</dt>
+            <dd className="strong">{won(r.refundAmount ?? 0)}</dd>
             {r.refundStatus && (
               <>
-                {" · "}
-                {/* 환불이 아직 끝나지 않은 상태만 강조한다 — 완료·환불 없음까지 빨간색이면 강조가 의미를 잃는다 */}
-                <span className={REFUND_PROBLEM_NOTICE[r.refundStatus] ? "error strong" : undefined}>
+                <dt>환불 상태</dt>
+                <dd className={refundProblem ? "error strong" : undefined}>
                   {REFUND_STATUS_LABEL[r.refundStatus] ?? r.refundStatus}
-                </span>
+                </dd>
               </>
             )}
-          </div>
-          {r.refundStatus && REFUND_PROBLEM_NOTICE[r.refundStatus] && (
-            <p className="error">{REFUND_PROBLEM_NOTICE[r.refundStatus]}</p>
-          )}
+          </dl>
+          {refundProblem && <p className="notice notice-error mt-12">{refundProblem}</p>}
         </div>
       )}
 
@@ -101,7 +134,7 @@ export default async function MyReservationPage({ params }: { params: Promise<{ 
               지금 취소하면 체크인 {r.refundEstimate.daysBeforeCheckIn}일 전이라{" "}
               <strong>
                 {r.refundEstimate.percent}% ({won(r.refundEstimate.amount)})
-              </strong>{" "}
+              </strong>
               를 환불받습니다.
             </p>
           ) : (

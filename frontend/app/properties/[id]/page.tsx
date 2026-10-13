@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { DateRangeFields } from "@/app/DateRangeFields";
 import { api } from "@/lib/api";
-import { seoulDate, won } from "@/lib/format";
+import { seoulDate, shortDate, won } from "@/lib/format";
 import type { Availability, PropertyDetail } from "@/lib/types";
 
 type Search = { checkIn?: string; checkOut?: string; guests?: string };
@@ -22,7 +22,7 @@ export default async function PropertyPage({
   const property = await api<PropertyDetail>(`/api/properties/${id}`, { revalidate: 60 });
   if (!property.ok) {
     if (property.status === 404) notFound();
-    return <p className="error">{property.error.message}</p>;
+    return <p className="notice notice-error">{property.error.message}</p>;
   }
 
   // 가용 객실: 초 단위로 변함 → 캐시하지 않음. 화면의 잔여 수는 참고값이고,
@@ -36,9 +36,9 @@ export default async function PropertyPage({
 
   return (
     <>
-      <p>
-        <Link href="/">← 숙소 목록</Link>
-      </p>
+      <Link href="/" className="back">
+        ← 숙소 목록
+      </Link>
       <h1>{property.data.name}</h1>
       <p className="muted">
         {property.data.region} · {property.data.address}
@@ -46,69 +46,72 @@ export default async function PropertyPage({
       {property.data.description && <p>{property.data.description}</p>}
 
       {/* GET 폼: 검색 조건이 URL 에 남아 새로고침·공유해도 같은 결과 */}
-      <form className="inline card">
+      <form className="card form-grid">
         <DateRangeFields today={seoulDate()} defaultCheckIn={checkIn ?? ""} defaultCheckOut={checkOut ?? ""} />
         <label>
           인원
           <input type="number" name="guests" min={1} max={10} defaultValue={guests ?? "2"} required />
         </label>
-        <button type="submit">예약 가능한 객실 검색</button>
+        <div className="actions">
+          <button type="submit" className="btn">
+            객실 검색
+          </button>
+        </div>
       </form>
 
-      {availability && !availability.ok && <p className="error">{availability.error.message}</p>}
+      {availability && !availability.ok && <p className="notice notice-error">{availability.error.message}</p>}
       {availability?.ok && (
         <>
-          <h2>
-            예약 가능한 객실 ({availability.data.nights}박, {availability.data.guests}명)
-          </h2>
+          <div className="section-title">
+            <h2>예약 가능한 객실</h2>
+            <span className="muted">
+              {availability.data.nights}박 · {availability.data.guests}명
+            </span>
+          </div>
           {availability.data.rooms.length === 0 ? (
-            <p>조건에 맞는 빈 객실이 없습니다.</p>
+            <p className="card empty">조건에 맞는 빈 객실이 없습니다.</p>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>객실</th>
-                  <th>날짜별 요금</th>
-                  <th>총 요금</th>
-                  <th>잔여</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {availability.data.rooms.map((room) => (
-                  <tr key={room.roomTypeId}>
-                    <td>
-                      {room.name}
-                      <div className="muted">최대 {room.capacity}명</div>
-                    </td>
-                    <td>
+            <div className="list list-2">
+              {availability.data.rooms.map((room) => (
+                <div className="card" key={room.roomTypeId}>
+                  <div className="item-head">
+                    <h3>{room.name}</h3>
+                    <span className="badge">잔여 {room.remaining}실</span>
+                  </div>
+                  <div className="muted">최대 {room.capacity}명</div>
+                  {/* 날짜별 요금(주말·성수기 차이)은 접어 두고 총액을 먼저 보여준다 */}
+                  <details className="fold mt-12">
+                    <summary>날짜별 요금 {room.nightlyRates.length}박</summary>
+                    <ul className="rows">
                       {room.nightlyRates.map((rate) => (
-                        <div key={rate.date} className="muted">
-                          {rate.date} {won(rate.price)}
-                        </div>
+                        <li key={rate.date}>
+                          <span>{shortDate(rate.date)}</span>
+                          <span>{won(rate.price)}</span>
+                        </li>
                       ))}
-                    </td>
-                    <td>
-                      <strong>{won(room.totalPrice)}</strong>
-                    </td>
-                    <td>{room.remaining}실</td>
-                    <td>
-                      <Link
-                        href={`/reservations/new?${new URLSearchParams({
-                          propertyId: id,
-                          roomTypeId: String(room.roomTypeId),
-                          checkIn: availability.data.checkIn,
-                          checkOut: availability.data.checkOut,
-                          guests: String(availability.data.guests),
-                        })}`}
-                      >
-                        예약하기
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </ul>
+                  </details>
+                  <div className="room-foot">
+                    <div>
+                      <div className="muted">총 요금</div>
+                      <strong className="amount">{won(room.totalPrice)}</strong>
+                    </div>
+                    <Link
+                      className="btn"
+                      href={`/reservations/new?${new URLSearchParams({
+                        propertyId: id,
+                        roomTypeId: String(room.roomTypeId),
+                        checkIn: availability.data.checkIn,
+                        checkOut: availability.data.checkOut,
+                        guests: String(availability.data.guests),
+                      })}`}
+                    >
+                      예약하기
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}

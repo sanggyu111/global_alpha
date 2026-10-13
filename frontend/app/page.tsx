@@ -26,9 +26,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <h1>숙소</h1>
+      <h1>어디로 떠나세요?</h1>
       {/* GET 폼: 검색 조건이 URL 에 남아 새로고침·공유해도 같은 결과 */}
-      <form className="inline card">
+      <form className="card form-grid">
         <label>
           지역
           <select name="region" defaultValue={region}>
@@ -38,43 +38,67 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <option value="제주">제주</option>
           </select>
         </label>
-        <DateRangeFields today={seoulDate()} defaultCheckIn={checkIn} defaultCheckOut={checkOut} />
         <label>
           인원
           <input type="number" name="guests" min={1} max={10} defaultValue={guests} required />
         </label>
-        <button type="submit">검색</button>
+        <DateRangeFields today={seoulDate()} defaultCheckIn={checkIn} defaultCheckOut={checkOut} />
+        <div className="actions">
+          <button type="submit" className="btn">
+            검색
+          </button>
+        </div>
       </form>
 
       {!result.ok ? (
-        <p className="error">{result.error.message}</p>
+        <p className="notice notice-error">{result.error.message}</p>
       ) : (
         <>
-          <h2>
-            예약 가능한 숙소 ({result.data.nights}박, {result.data.guests}명)
-          </h2>
+          <div className="section-title">
+            <h2>예약 가능한 숙소 {result.data.properties.length}곳</h2>
+            <span className="muted">
+              {result.data.nights}박 · {result.data.guests}명
+            </span>
+          </div>
           {result.data.properties.length === 0 ? (
-            <p>조건에 맞는 빈 객실이 있는 숙소가 없습니다.</p>
+            <p className="card empty">조건에 맞는 빈 객실이 있는 숙소가 없습니다.</p>
           ) : (
-            result.data.properties.map((p) => (
-              <div className="card" key={p.id}>
-                <h2>
-                  <Link href={`/properties/${p.id}?${stay}`}>{p.name}</Link>
-                </h2>
-                <div className="muted">
-                  {p.region} · {p.address}
+            <div className="list">
+              {result.data.properties.map((p) => (
+                <div className="card" key={p.id}>
+                  <div className="item-head">
+                    <div>
+                      <h2>
+                        <Link href={`/properties/${p.id}?${stay}`}>{p.name}</Link>
+                      </h2>
+                      <div className="muted">
+                        {p.region} · {p.address}
+                      </div>
+                    </div>
+                    <Link href={`/properties/${p.id}?${stay}`} className="btn btn-secondary btn-sm">
+                      객실 보기
+                    </Link>
+                  </div>
+                  {/* 잔여 수는 참고값 — 최종 판단은 예약 생성 시 백엔드의 조건부 UPDATE */}
+                  <ul className="rows">
+                    {p.rooms.map((room) => (
+                      <li key={room.roomTypeId}>
+                        <div>
+                          {room.name}
+                          <div className="muted">
+                            최대 {room.capacity}명 · 잔여 {room.remaining}실
+                          </div>
+                        </div>
+                        <div className="price">
+                          {won(room.totalPrice)}
+                          <div className="muted">{result.data.nights}박 총액</div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                {/* 잔여 수는 참고값 — 최종 판단은 예약 생성 시 백엔드의 조건부 UPDATE */}
-                <ul>
-                  {p.rooms.map((room) => (
-                    <li key={room.roomTypeId}>
-                      {room.name} <span className="muted">(최대 {room.capacity}명)</span> · 잔여 {room.remaining}실 · 총{" "}
-                      {won(room.totalPrice)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </>
       )}
