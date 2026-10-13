@@ -11,7 +11,7 @@ type Search = { propertyId?: string; roomTypeId?: string; checkIn?: string; chec
 export default async function NewReservationPage({ searchParams }: { searchParams: Promise<Search> }) {
   const { propertyId, roomTypeId, checkIn, checkOut, guests } = await searchParams;
   if (!propertyId || !roomTypeId || !checkIn || !checkOut || !guests) {
-    return <p className="error">예약 조건이 없습니다. 숙소에서 객실을 선택해 주세요.</p>;
+    return <p className="notice notice-error">예약 조건이 없습니다. 숙소에서 객실을 선택해 주세요.</p>;
   }
   const back = `/properties/${propertyId}?${new URLSearchParams({ checkIn, checkOut, guests })}`;
 
@@ -23,10 +23,12 @@ export default async function NewReservationPage({ searchParams }: { searchParam
   if (!room) {
     return (
       <>
-        <p className="error">
+        <p className="notice notice-error">
           {availability.ok ? "선택한 객실은 이제 예약할 수 없습니다 (매진 또는 조건 변경)." : availability.error.message}
         </p>
-        <Link href={back}>← 다른 객실 보기</Link>
+        <Link href={back} className="back">
+          ← 다른 객실 보기
+        </Link>
       </>
     );
   }
@@ -36,23 +38,27 @@ export default async function NewReservationPage({ searchParams }: { searchParam
 
   return (
     <>
-      <p>
-        <Link href={back}>← 객실 다시 선택</Link>
-      </p>
+      <Link href={back} className="back">
+        ← 객실 다시 선택
+      </Link>
       <h1>예약 정보 입력</h1>
       <div className="card">
-        <div>
-          <strong>{room.name}</strong> · {checkIn} ~ {checkOut} ({availability.ok && availability.data.nights}박) ·{" "}
-          {guests}명
+        <h2>{room.name}</h2>
+        <dl className="kv">
+          <dt>일정</dt>
+          <dd>
+            {checkIn} ~ {checkOut} ({availability.ok && availability.data.nights}박)
+          </dd>
+          <dt>인원</dt>
+          <dd>{guests}명</dd>
+        </dl>
+        <div className="total">
+          <span>총 요금</span>
+          <strong>{won(room.totalPrice)}</strong>
         </div>
-        <div>
-          총 요금 <strong>{won(room.totalPrice)}</strong>
-        </div>
-        <div className="muted">예약하면 10분 동안 객실이 선점되고, 그 안에 결제해야 확정됩니다.</div>
       </div>
-      <ReservationForm
-        hidden={{ roomTypeId, checkIn, checkOut, guests, idempotencyKey }}
-      />
+      <p className="notice notice-info">예약하면 10분 동안 객실이 선점되고, 그 안에 결제해야 확정됩니다.</p>
+      <ReservationForm hidden={{ roomTypeId, checkIn, checkOut, guests, idempotencyKey }} />
     </>
   );
 }

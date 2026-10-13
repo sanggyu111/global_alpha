@@ -707,6 +707,17 @@ const LOG = [
     cause: "① 모의 PG 가 승인 기록 → 웹훅 전송 → 지연 → 응답 순서라, 백엔드 읽기 타임아웃(3초) 전에 웹훅이 결제를 확정해 둠. 타임아웃 뒤 currentResult 가 이미 CONFIRMED 를 읽음 (PG_TIMEOUT 기록·해결됨은 정상). ② Bean Validation 어노테이션에 message 미지정 ③ details 에 page 누락.",
     resolution: "사용자 선택 (b)안: 웹훅을 지연 뒤(응답 시점)에 전송 — 실제 PG 의 일반적인 순서. PaymentTimeoutWebhookTest 로 타임아웃 → PROCESSING → 웹훅 확정 1회 검증, 예전 순서에서 실패 확인. 예약·관리자 요청 DTO 에 한국어 메시지, page 오류 상세에 page·size. 로컬 화면에서 3.4초 처리 중 → 5.6초 확정 확인.",
     refs: ["docs/02-design.md §8.8", "backend/src/main/java/com/staypoint/mockpg/MockPgController.java", "backend/src/test/java/com/staypoint/payment/PaymentTimeoutWebhookTest.java"],
+  },  {
+    id: "L065",
+    at: "2026-10-13",
+    task: "T28",
+    type: "change",
+    status: "resolved",
+    title: "화면 정리 · 모바일 대응 — 휴대폰에서 설명 글이 많아 화면이 아래로 길게 늘어짐",
+    detail: "사용자 요청: UI 는 평가 항목이 아니지만 풀스택 직무라 보기 좋게, 휴대폰에서도 잘 보이게. 기존 화면은 기본 HTML 표와 긴 설명문이라 좁은 화면에서 표가 넘치고 페이지가 길었다.",
+    cause: "UI 완성도는 평가하지 않는다는 과제 문구에 맞춰 최소 CSS 만 두었음 (globals.css 119줄).",
+    resolution: "결정: 라이브러리 없이 globals.css 하나(색·간격 변수)로 모바일 우선 작성 — Tailwind·UI 킷은 화면 12개에 비해 설정·설명거리만 늘어 버림. 사용자 화면은 표 → 카드 목록, 날짜별 요금·데모 PG 설정·환불 장애 선택·관리자 설명은 <details> 로 접고 요약에 현재 값 표시, 관리자 표는 좁은 화면에서 data-label 로 행별 세로 배치. 데이터 흐름 변경 없음. 확인 중 headless Chrome 의 최소 창 폭(약 500px) 때문에 390px 캡처가 잘려 보였음 → 390px iframe·CDP 모바일 에뮬레이션으로 다시 확인, 실제 넘침 0px.",
+    refs: ["docs/02-design.md §8.9", "frontend/app/globals.css", "README.md Q1"],
   },
 ];
 </script>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 
+import { StatusBadge } from "@/app/StatusBadge";
 import { api } from "@/lib/api";
-import { STATUS_LABEL, dateTime, won } from "@/lib/format";
+import { dateTime, won } from "@/lib/format";
 import type { ReservationSummary } from "@/lib/types";
 import { getUserId } from "@/lib/user";
 
@@ -12,51 +13,38 @@ export default async function MyReservationsPage() {
 
   return (
     <>
-      <h1>내 예약</h1>
-      <p className="muted">사용자: {userId}</p>
+      <div className="section-title">
+        <h1>내 예약</h1>
+        <span className="muted">{userId}</span>
+      </div>
       {!result.ok ? (
-        <p className="error">{result.error.message}</p>
+        <p className="notice notice-error">{result.error.message}</p>
       ) : result.data.length === 0 ? (
-        <p>예약이 없습니다.</p>
+        <p className="card empty">예약이 없습니다.</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>예약번호</th>
-              <th>숙소 / 객실</th>
-              <th>일정</th>
-              <th>금액</th>
-              <th>상태</th>
-              <th>예약일</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.data.map((r) => (
-              <tr key={r.id}>
-                <td>
-                  <Link href={`/me/reservations/${r.id}`}>{r.reservationNo}</Link>
-                </td>
-                <td>
-                  {r.propertyName}
+        <div className="list">
+          {result.data.map((r) => (
+            // 카드 전체가 상세로 가는 링크. 결제 대기 건은 상세에서 결제로 이어진다
+            <Link key={r.id} href={`/me/reservations/${r.id}`} className="card card-link">
+              <div className="item-head">
+                <div>
+                  <h3>{r.propertyName}</h3>
                   <div className="muted">{r.roomTypeName}</div>
-                </td>
-                <td>
+                </div>
+                <StatusBadge status={r.status} />
+              </div>
+              <div className="room-foot">
+                <div>
                   {r.checkIn} ~ {r.checkOut}
-                </td>
-                <td>{won(r.totalAmount)}</td>
-                <td>
-                  {STATUS_LABEL[r.status]}
-                  {r.status === "PENDING" && (
-                    <div>
-                      <Link href={`/reservations/${r.id}/pay`}>결제하기</Link>
-                    </div>
-                  )}
-                </td>
-                <td className="muted">{dateTime(r.createdAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <div className="muted">
+                    {r.reservationNo} · 예약 {dateTime(r.createdAt)}
+                  </div>
+                </div>
+                <div className="price">{won(r.totalAmount)}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
     </>
   );

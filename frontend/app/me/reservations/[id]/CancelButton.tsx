@@ -47,26 +47,30 @@ export function CancelButton({
 
   return (
     <>
+      {/* 데모 선택지는 접어 두고, 요약에 지금 고른 값을 보여준다 (T28) */}
       {hasRefund && (
-        <fieldset>
-          <legend>데모: 모의 PG 환불 결과</legend>
-          <select value={faultIndex} onChange={(e) => setFaultIndex(Number(e.target.value))}>
-            {REFUND_FAULTS.map((f, i) => (
-              <option key={f.label} value={i}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-          <p className="muted">
+        <details className="fold mt-12">
+          <summary>데모 PG 환불 결과 · {REFUND_FAULTS[faultIndex].label.split(" →")[0]}</summary>
+          <label>
+            모의 PG 환불 결과
+            <select value={faultIndex} onChange={(e) => setFaultIndex(Number(e.target.value))}>
+              {REFUND_FAULTS.map((f, i) => (
+                <option key={f.label} value={i}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="muted mt-12">
             운영자 확인 대상은 <Link href="/admin/issues">관리자 › 확인 필요</Link> 에서 보고 수동 재시도할 수 있습니다 (장애
             횟수를 다 쓴 뒤라 수동 재시도는 성공).
           </p>
-        </fieldset>
+        </details>
       )}
-      <button type="button" onClick={cancel} disabled={pending}>
+      <button type="button" className="btn-danger btn-block" onClick={cancel} disabled={pending}>
         {pending ? "취소 중…" : "예약 취소"}
       </button>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="notice notice-error mt-12">{error}</p>}
     </>
   );
 }

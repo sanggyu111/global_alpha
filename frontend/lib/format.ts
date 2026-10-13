@@ -66,3 +66,9 @@ export const PAYMENT_STATUS_LABEL: Record<string, string> = {
   FAILED: "실패",
   CANCELED: "취소(환불)됨",
 };
+
+/** yyyy-MM-dd → "10/20 (화)" — 좁은 화면용 짧은 날짜 (T28). 시간대 영향 없이 날짜만 읽는다. */
+export function shortDate(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} (${"일월화수목금토"[d.getUTCDay()]})`;
+}

@@ -1,119 +1,760 @@
-/* UI 완성도는 평가 대상이 아니라 기본 HTML 에 최소한의 정리만 한다. */
+/*
+ * 공통 스타일 (T28, 설계 8.9). 라이브러리 없이 이 파일 하나로 관리한다.
+ * 모바일 우선: 기본값은 좁은 화면 기준이고, 640px 이상에서 여러 열로 펼친다.
+ */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --text: #17202a;
+  --muted: #66707d;
+  --line: #e3e7ec;
+  --accent: #0f6e63;
+  --accent-hover: #0b5a51;
+  --accent-soft: #e6f3f1;
+  --error: #b91c1c;
+  --error-soft: #fdecec;
+  --success: #15803d;
+  --success-soft: #e8f6ed;
+  --warn: #a15c07;
+  --warn-soft: #fdf3e2;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
-  color: #1b1f24;
-  background: #f6f7f9;
-  line-height: 1.5;
+  font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
 }
 
 a {
-  color: #0f6e63;
-}
-
-.header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e2e6eb;
-}
-
-.header nav {
-  display: flex;
-  gap: 12px;
-  flex: 1;
-}
-
-.logo {
-  font-weight: 700;
+  color: var(--accent);
   text-decoration: none;
 }
 
-.user-form {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  font-size: 14px;
+a:hover {
+  text-decoration: underline;
 }
+
+h1 {
+  font-size: 22px;
+  margin: 4px 0 12px;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
+h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+p {
+  margin: 0 0 8px;
+}
+
+/* ── 헤더 ───────────────────────────────────────── */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.header-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 10px 16px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.logo:hover {
+  text-decoration: none;
+}
+
+/* 좁은 화면: 메뉴가 둘째 줄 전체를 쓰고 넘치면 가로로 밀린다 (페이지 전체 가로 스크롤 방지) */
+.header nav {
+  order: 3;
+  flex-basis: 100%;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.header nav a {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+}
+
+.header nav a:hover {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom-color: var(--line);
+}
+
+.user-menu {
+  margin-left: auto;
+  font-size: 13px;
+  position: relative;
+}
+
+.user-menu summary {
+  color: var(--muted);
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.user-menu form {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+  padding: 12px;
+  width: 240px;
+  display: grid;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .header-inner {
+    padding: 0 16px;
+    flex-wrap: nowrap;
+  }
+
+  .header nav {
+    order: 0;
+    flex-basis: auto;
+    flex: 1;
+  }
+
+  .header nav a {
+    padding: 16px 10px 14px;
+  }
+}
+
+/* ── 레이아웃 ───────────────────────────────────── */
 
 .main {
   max-width: 960px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 16px 16px 48px;
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e2e6eb;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 16px;
   margin-bottom: 12px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-}
-
-th,
-td {
-  border-bottom: 1px solid #e2e6eb;
-  padding: 8px;
-  text-align: left;
-  vertical-align: top;
-}
-
-form.inline {
+.section-title {
   display: flex;
-  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 8px;
-  align-items: flex-end;
+  margin: 20px 0 8px;
 }
+
+.section-title h2 {
+  margin: 0;
+}
+
+.back {
+  display: inline-block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+/* 이름 – 값 목록 (예약 요약 등) */
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+
+.kv dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.kv dd {
+  margin: 0;
+  text-align: right;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.total strong {
+  font-size: 20px;
+}
+
+/* ── 폼 ─────────────────────────────────────────── */
 
 label {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
-  font-size: 14px;
-  gap: 2px;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
+/* iOS 는 16px 미만 입력란에 포커스하면 화면을 확대한다 */
 input,
-select,
-button {
+select {
   font: inherit;
-  padding: 6px 8px;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text);
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #cfd5dc;
+  border-radius: 8px;
+  background: var(--surface);
 }
 
-button {
+input:focus,
+select:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* 검색·필터 폼: 좁은 화면은 2열, 넓은 화면은 한 줄 */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.form-grid .wide,
+.form-grid .actions {
+  grid-column: 1 / -1;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.actions .btn {
+  flex: 1;
+}
+
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
+  .form-grid .wide,
+  .form-grid .actions {
+    grid-column: auto;
+  }
+}
+
+.form-stack {
+  display: grid;
+  gap: 12px;
+}
+
+/* ── 버튼 ───────────────────────────────────────── */
+
+button,
+.btn {
+  font: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+button:hover,
+.btn:hover {
+  background: var(--accent-hover);
+  text-decoration: none;
 }
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.55;
+}
+
+.btn-secondary,
+button.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: #cfd5dc;
+}
+
+.btn-secondary:hover {
+  background: var(--bg);
+}
+
+.btn-danger,
+button.btn-danger {
+  background: var(--surface);
+  color: var(--error);
+  border-color: #f0b4b4;
+}
+
+.btn-danger:hover {
+  background: var(--error-soft);
+}
+
+.btn-sm,
+button.btn-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ── 상태 표시 ──────────────────────────────────── */
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #eef1f4;
+  color: var(--muted);
+}
+
+.badge-PENDING {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge-CONFIRMED {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge-COMPLETED {
+  background: #e8eefb;
+  color: #2a4fa0;
+}
+
+.badge-CANCELED {
+  background: #eef1f4;
+  color: var(--muted);
+}
+
+.notice {
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.notice-error {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.notice-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.notice-info {
+  background: var(--accent-soft);
+  color: #0b4f47;
+}
+
+.notice-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
 }
 
 .error {
-  color: #b91c1c;
+  color: var(--error);
+}
+
+.success {
+  color: var(--success);
 }
 
 .strong {
   font-weight: 700;
 }
 
-.success {
-  color: #15803d;
+.muted {
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.muted {
-  color: #5d6673;
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px 16px;
+}
+
+/* ── 접기 (설명·데모 선택지) ───────────────────── */
+
+details.fold {
+  border: 1px dashed #cfd5dc;
+  border-radius: 8px;
+  padding: 0 12px;
+  margin: 0 0 12px;
+  background: #fafbfc;
+}
+
+details.fold > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  list-style: none;
+}
+
+details.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.fold > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 14px;
+  transition: transform 0.15s;
+}
+
+details.fold[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+details.fold[open] {
+  padding-bottom: 12px;
+}
+
+details.fold .form-stack {
+  margin-bottom: 4px;
+}
+
+/* ── 목록 (숙소·객실·예약 카드) ─────────────────── */
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .list-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.item-head h2,
+.item-head h3 {
+  margin: 0;
+}
+
+.rows {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.rows > li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rows > li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.price {
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.room-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+a.card-link {
+  display: block;
+  color: inherit;
+}
+
+a.card-link:hover {
+  text-decoration: none;
+  border-color: var(--accent);
+}
+
+/* ── 표 ─────────────────────────────────────────── */
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 14px;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f8f9fb;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tr.muted td {
+  color: var(--muted);
+}
+
+/*
+ * 좁은 화면에서 관리자 표: 행 하나를 카드처럼 세로로 쌓고, 칸 이름은 td 의 data-label 로 붙인다.
+ * 표 마크업은 그대로라 넓은 화면에서는 일반 표.
+ */
+@media (max-width: 639px) {
+  .table-stack thead {
+    display: none;
+  }
+
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-stack tr {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .table-stack tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .table-stack td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border: 0;
+    padding: 4px 0;
+    text-align: right;
+  }
+
+  .table-stack td > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .table-stack td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .table-stack td[data-label=""]::before {
+    content: none;
+  }
+
+  .table-stack td:empty {
+    display: none;
+  }
+}
+
+/* ── 관리자 하위 메뉴 ───────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin: 0 0 12px;
+  padding-bottom: 2px;
+}
+
+.tabs a {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.tabs a:hover {
+  text-decoration: none;
+  border-color: var(--accent);
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  h1 {
+    font-size: 26px;
+  }
+
+  .main {
+    padding-top: 24px;
+  }
+}
+
+.mt-12 {
+  margin-top: 12px;
+}
+
+.amount {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.form-grid .notice {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/* 카드 안 마지막 요소의 아래 여백이 카드 안쪽 여백과 겹치지 않게 */
+.card > :last-child {
+  margin-bottom: 0;
+}
+
+.section-title h1 {
+  margin: 0;
+}
+
+.list > .card {
+  margin-bottom: 0;
+}
+
+.price .muted {
+  font-weight: 400;
+}
+
+.user-menu summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.user-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 재고 폼과 요금 폼 사이 구분선 */
+.stack > form + form {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+/* 넓은 화면의 표: 날짜·금액·번호는 한 줄로. 칸이 넘치면 표 안에서만 가로 스크롤 */
+@media (min-width: 640px) {
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
 }
