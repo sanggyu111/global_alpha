@@ -194,6 +194,12 @@ const PROGRESS = {
       checks: { error: true, spec: true }, commits: ["aefc847", "12671fa", "fac4a25", "83e333c", "7c782b4"],
       note: "설계 8.9 (L065). 표시(마크업·CSS)만 변경 — 데이터 패칭·캐싱·Server Action·멱등 키 그대로, 라이브러리 추가 없음. frontend lint·build 통과. 로컬 실제 앱(Chrome, 390px 모바일 에뮬레이션): 예약 생성 → 결제(지연 5초) 3.3초 처리 중 → 5.4초 확정 → 취소 → 환불 완료, 11개 화면 모두 가로 넘침 0px. 1280px 화면도 캡처로 확인. backend 변경 없음. 사용자 승인으로 main 병합·push.",
     },
+    {
+      id: "T29", phase: "submit", title: "제출 전 점검 — 외부 검증 체크리스트 반영 (테스트 재실행·clone 재현·데모 시나리오 자동 재연)",
+      status: "review", branch: "chore/T29-submit-check",
+      checks: { error: true, spec: true }, commits: ["63fab39", "76e6caa"],
+      note: "설계 12장 T29 (L066). 운영 코드 변경 없음. backend 전체 테스트 190건 통과(실패 0). 동시성 테스트 3회 반복 모두 통과(연박 겹침 성공 수 4·3·3·2, 초과 0). 재계산 FOR UPDATE 제거 → 두 번 모두 5회 중 1회 실패 확인 후 원복. GitHub 새 clone 에서 README 순서대로: 빈 DB 마이그레이션 V1~V4+seed, bootRun·npm ci·lint·build·dev 통과. 데모 시나리오 8개(확인 항목 13개) Chrome 자동 재연 — 전 항목 정상(S7 은 스크립트 기준값 오류로 FAIL 표시됐으나 데이터로 HOLD_EXPIRED·재고 0 복원 확인), 관리자 2페이지는 예약 23건으로 별도 확인. 배포: health UP, Swagger 200, 불일치 0·확인 필요 0, 시드 재고 2027-01-06 까지. README 테스트 건수 159 → 190 통일, Q3 실행 결과 최신화.",
+    },
   ],
 
   // 과제 필수 요구사항 (PDF 2.3) — 우선순위 순
