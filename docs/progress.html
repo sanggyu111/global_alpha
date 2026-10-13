@@ -190,9 +190,9 @@ const PROGRESS = {
     },
     {
       id: "T28", phase: "dev", title: "화면 정리 · 모바일 대응 — 공통 CSS, 사용자 화면 카드 목록, 설명·데모 선택지 접기, 관리자 표 좁은 화면 대응",
-      status: "review", branch: "feat/T28-frontend-ui",
+      status: "done", branch: "feat/T28-frontend-ui",
       checks: { error: true, spec: true }, commits: ["aefc847", "12671fa", "fac4a25", "83e333c", "7c782b4"],
-      note: "설계 8.9 (L065). 표시(마크업·CSS)만 변경 — 데이터 패칭·캐싱·Server Action·멱등 키 그대로, 라이브러리 추가 없음. frontend lint·build 통과. 로컬 실제 앱(Chrome, 390px 모바일 에뮬레이션): 예약 생성 → 결제(지연 5초) 3.3초 처리 중 → 5.4초 확정 → 취소 → 환불 완료, 11개 화면 모두 가로 넘침 0px. 1280px 화면도 캡처로 확인. backend 변경 없음.",
+      note: "설계 8.9 (L065). 표시(마크업·CSS)만 변경 — 데이터 패칭·캐싱·Server Action·멱등 키 그대로, 라이브러리 추가 없음. frontend lint·build 통과. 로컬 실제 앱(Chrome, 390px 모바일 에뮬레이션): 예약 생성 → 결제(지연 5초) 3.3초 처리 중 → 5.4초 확정 → 취소 → 환불 완료, 11개 화면 모두 가로 넘침 0px. 1280px 화면도 캡처로 확인. backend 변경 없음. 사용자 승인으로 main 병합·push.",
     },
   ],
 
