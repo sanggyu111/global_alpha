@@ -524,7 +524,7 @@ HAVING i.booked_count <> COUNT(r.id);
 | 불일치·환불 실패 알림 | 화면·API 조회만, 주기 감지·경보 없음 | Q8-1 |
 | E2E 테스트 | 저장소에 없음 (개발 중 임시 스크립트로 실제 브라우저 확인) | Q8-4 |
 | 내 예약 목록 | 최근 100건만 (페이지 없음) | 데모 범위. 관리자 목록은 페이지네이션 있음 |
-| 가산점 | 헬스 체크(Actuator)·API 문서(Swagger)만 | 필수 항목 우선 |
+| 가산점 | 헬스 체크(Actuator)·API 문서(Swagger)·자동 배포(CD: `main` push → Railway·Vercel 이 GitHub 연동으로 자동 빌드·배포)만. CI(push 시 자동 테스트)는 없음 — 테스트는 로컬 `./gradlew build` 로 확인 | 필수 항목 우선. CI 는 Q8-4 (E2E 와 함께) |
 
 ---
 
