@@ -46,7 +46,7 @@ ZIVO 채용 사전 과제. 가상의 호텔 예약 서비스 STAYPOINT 의 핵�
 
 ## 실행 방법
 
-> 2026-10-09, 새 폴더에 `git clone` 한 뒤 아래 순서 그대로 실행해 확인했다: DB·백엔드·프론트 기동, 브라우저로 검색 → 예약 → 결제 확정, 백엔드 테스트 159건 통과, 프론트 lint·build 통과.
+> 2026-10-13, 새 폴더에 `git clone` 한 뒤 아래 순서 그대로 실행해 확인했다: 빈 DB 에 마이그레이션 V1~V4 + 데모 데이터 적용, 백엔드·프론트(`npm run dev`) 기동, 아래 **데모 시나리오 8개를 실제 브라우저로 모두 재연**, 백엔드 테스트 190건 통과, 프론트 lint·build 통과. (첫 확인은 2026-10-09, 당시 테스트 159건)
 
 ### 준비물
 
@@ -129,7 +129,7 @@ npm run lint && npm run build # 타입 체크 포함
 | Railway 첫 배포 실패, 알림 메일의 링크는 "404 Looks like you are lost" | 저장소를 연결하는 순간 첫 배포가 시작되는데, 그때는 아직 DB 와 환경변수가 없어 앱이 `localhost:5432` 로 접속하다 종료. 메일 링크 404 는 원인과 무관(대시보드에서 직접 확인) | DB 추가·변수 입력 후 재배포. 대시보드의 Deploy Logs 가 실제 원인을 보는 곳 |
 | 변수를 넣었는데도 **CRASHED**, 로그 첫 줄은 `Picked up JAVA_TOOL_OPTIONS` 뿐 | (오판) 메모리 부족으로 의심 → 로컬에서 `docker run --memory=512m` 으로 재현해 보니 약 300MB 로 정상 기동 → 메모리는 원인 아님. 로그를 더 내려 보니 `Driver org.postgresql.Driver claims to not accept jdbcUrl, jdbc:postgresql://{{Postgres.PGHOST}}…` | Railway 참조 변수를 **`$` 없이** `{{Postgres.PGHOST}}` 로 입력해 치환되지 않고 글자 그대로 전달됨 → `${{Postgres.PGHOST}}` 로 다시 입력. 아래 배포 순서에 주의 문구 추가 |
 | 배포 준비 중 발견: Linux 에서 `./gradlew` 실패 가능 | `backend/gradlew` 가 Windows 에서 실행 권한 없이(100644) 커밋됨 | `git update-index --chmod=+x`, Dockerfile 에서도 `chmod +x` |
-| Railway PostgreSQL 이 **18.6** (로컬·테스트는 15) | Railway 가 새 DB 를 최신 버전으로 생성 | 이 설계가 쓰는 기능(행 잠금, CHECK, 부분 UNIQUE, `ON CONFLICT`, `SKIP LOCKED`)은 15·18 공통. 테스트 이미지를 `postgres:18-alpine` 으로 바꿔 **백엔드 테스트 159건 전부 통과**(동시 예약 3/47 동일) 확인 후 15 로 되돌림 |
+| Railway PostgreSQL 이 **18.6** (로컬·테스트는 15) | Railway 가 새 DB 를 최신 버전으로 생성 | 이 설계가 쓰는 기능(행 잠금, CHECK, 부분 UNIQUE, `ON CONFLICT`, `SKIP LOCKED`)은 15·18 공통. 테스트 이미지를 `postgres:18-alpine` 으로 바꿔 **당시(T15) 백엔드 테스트 159건 전부 통과**(동시 예약 3/47 동일) 확인 후 15 로 되돌림 |
 
 Vercel 은 Root Directory(`frontend`)와 `BACKEND_URL` 만 지정해 한 번에 배포됐다.
 
@@ -310,17 +310,16 @@ UPDATE room_inventory
 - 검증: 성공 정확히 3, 나머지 47은 모두 `SOLD_OUT`(그 외 오류 0), 두 날짜 모두 `booked_count == 3`, 예약 3건, 이력 3건.
 - **연박 부분 겹침 (T25)**: 날짜마다 재고 2실인 4일(d0~d3)에 서로 엇갈려 겹치는 구간(d0–d1, d1–d2, d2–d3, d0–d3, d1) 예약 40건을 동시에. 검증: 예상 밖 오류(데드락 포함) 0, 모든 날짜에서 `booked_count` = 그 날짜를 쓰는 예약 수 ≤ 2. 어느 구간이 이기는지는 실행마다 달라 성공 수는 고정하지 않는다.
 
-실제 실행 결과 (`./gradlew test` — 첫 줄 2026-10-09, 둘째 줄 2026-10-11):
+실제 실행 결과 (`./gradlew test` 전체 190건 통과, 2026-10-13):
 
 ```
-[동시 예약] 재고=3, 요청=50 → 성공=3, SOLD_OUT=47, 기타 오류=0, booked_count(2026-10-19)=3, booked_count(2026-10-20)=3
-ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정확히_3명만_성공한다() PASSED (0.357s)
-[연박 부분 겹침] 날짜별 재고=2, 요청=40 → 성공=3, SOLD_OUT=37, 기타 오류=0, booked_count: 2026-10-21=0/2 2026-10-22=2/2 2026-10-23=2/2 2026-10-24=1/2
+[동시 예약] 재고=3, 요청=50 → 성공=3, SOLD_OUT=47, 기타 오류=0, booked_count(2026-10-23)=3, booked_count(2026-10-24)=3
+[연박 부분 겹침] 날짜별 재고=2, 요청=40 → 성공=4, SOLD_OUT=36, 기타 오류=0, booked_count: 2026-10-23=1/2 2026-10-24=2/2 2026-10-25=2/2 2026-10-26=2/2
 ```
 
-개발 중 동시 예약은 4회, 연박 부분 겹침은 4회 연속 실행해 매번 오류 0·초과 0이었다.
+개발 중 동시 예약은 4회, 연박 부분 겹침은 4회 연속 실행해 매번 오류 0·초과 0이었다. 제출 전 점검(2026-10-13)에서 동시성 테스트만 3회 더 반복해도 같았다. 연박 부분 겹침의 성공 수는 실행마다 다르다(4·3·3·2) — 어느 구간이 먼저 잡히느냐에 따라 남는 조합이 달라지기 때문이고, 어느 날짜도 재고 2 를 넘지 않았다.
 
-**그 밖의 정합성 테스트** — 백엔드 테스트 190건, 전부 통과 (T27 기준)
+**그 밖의 정합성 테스트** — 백엔드 테스트 190건, 전부 통과 (2026-10-13 실행)
 
 | 테스트 | 검증 |
 |---|---|
@@ -335,7 +334,7 @@ ReservationConcurrencyTest > 재고_3실에_50명이_동시에_예약하면_정�
 | 결제 취소 재시도 (S8) | 아래 출력 — 5회 후 MANUAL_REVIEW, 6번째 시도 없음 / 스케줄러 3개 동시 → 각 건 1회 시도 |
 | 환불 실패 데모 (T20) | PG 거절 선택 → 즉시 MANUAL_REVIEW → 수동 재시도 성공 / 장애 5회 → 파라미터 없는 스케줄러 재시도도 실패해 MANUAL_REVIEW/5 → 수동 재시도 성공 / 장애 1회 → 다음 재시도에서 환불 — [RefundFaultDemoTest](backend/src/test/java/com/staypoint/cancellation/RefundFaultDemoTest.java) |
 | 관리자 재고 축소 (S11) | 예약 수 미만이면 전체 거부, 동시 예약과 겹쳐도 booked ≤ total |
-| **재계산 동시성 (T26)** | `booked_count` 를 실제(4)보다 크게(10) 틀어 둔 뒤 재계산 1건 + 새 예약 8건 + 기존 예약 취소 4건을 동시에 → 끝난 뒤 `booked_count` = 활성 예약 수(8), 불일치 0. 5회 반복을 4번 돌려 20회 모두 통과. **재계산의 `FOR UPDATE` 를 빼고 돌리면 5회 중 2회 실패**(8 기대 → 6: 커밋 전 예약 몫을 덮어씀, 9: 커밋 전 취소 몫을 덮어씀) — 테스트가 실제로 이 경합을 잡는다는 확인 — [AdminRecountConcurrencyTest](backend/src/test/java/com/staypoint/admin/AdminRecountConcurrencyTest.java) |
+| **재계산 동시성 (T26)** | `booked_count` 를 실제(4)보다 크게(10) 틀어 둔 뒤 재계산 1건 + 새 예약 8건 + 기존 예약 취소 4건을 동시에 → 끝난 뒤 `booked_count` = 활성 예약 수(8), 불일치 0. 5회 반복을 4번 돌려 20회 모두 통과. **재계산의 `FOR UPDATE` 를 빼고 돌리면 5회 중 1~2회 실패**(T26 에서 2회, 2026-10-13 재현에서 두 번 돌려 각 1회)(8 기대 → 6: 커밋 전 예약 몫을 덮어씀, 9: 커밋 전 취소 몫을 덮어씀) — 테스트가 실제로 이 경합을 잡는다는 확인 — [AdminRecountConcurrencyTest](backend/src/test/java/com/staypoint/admin/AdminRecountConcurrencyTest.java) |
 | **시간대 경계 (T25)** | JVM 기본 시간대를 UTC 로 두고 시각을 UTC 15:30(= 서울 다음 날 00:30)으로 고정 → 서울 기준 6일 전 취소는 70% (UTC 날짜로 세면 100% 가 됨). 운영 `Clock` 빈이 Asia/Seoul 인지도 확인 — [RefundTimezoneTest](backend/src/test/java/com/staypoint/cancellation/RefundTimezoneTest.java) |
 | PG 오류 기록 (T22·T23) | 환불 실패 회차별 기록·재시도 성공 후에도 유지, 거절은 FAILED 전이와 함께 1회(중복 웹훅에도), 타임아웃 → `PG_TIMEOUT`, 해결된 기록만 삭제 |
 
