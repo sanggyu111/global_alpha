@@ -469,18 +469,23 @@ HAVING i.booked_count <> COUNT(r.id);
 
 ### Q7. 처음 써본 것과 익힌 방법
 
-공부한 기술은 모두 같은 방식 — **공식 문서 · 구글링 · AI 에이전트로 개념을 확인**했다. 기술별 시간은 따로 재지 않았고, 개념 확인에 쓴 시간은 모두 합쳐 **약 2시간**이다. Flyway · Docker Compose · Testcontainers 는 따로 공부하지 않고 사용했다 — AI 에이전트가 작성한 설정을 실행·테스트 결과로 확인했다.
+익힌 방법은 기술마다 같다.
 
-| 기술 | 이전 경험 | 이번에 익힌 것 (이 저장소의 어디) | 익힌 방법 · 시간 |
-|---|---|---|---|
-| Spring Boot | 강의 + 간단한 라이브 코딩 | Boot 4.1 의 모듈 분리된 스타터, `@Transactional` 경계 나누기(프록시라 같은 클래스 안 호출은 적용 안 됨), `TransactionTemplate` | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
-| JPA (심화) | 처음 | 비관적 잠금(`@Lock`), 영속성 컨텍스트의 낡은 상태 문제(L032), `ddl-auto: validate` | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
-| PostgreSQL | 처음 | 행 잠금과 READ COMMITTED 재평가, CHECK, 부분 UNIQUE, `ON CONFLICT`, `FOR UPDATE SKIP LOCKED`, 오류 난 트랜잭션은 더 쿼리할 수 없음(25P02) | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
-| Flyway | 처음 | 버전·repeatable 마이그레이션, 저장소 루트 `db/` 를 jar 에 포함 | 따로 공부하지 않음 — 에이전트가 작성한 설정을 실행·테스트 결과로 확인 |
-| Docker / docker compose | 처음 | 로컬 DB, Windows 에서 WSL2 필요(L023) | 따로 공부하지 않음 — 에이전트가 작성한 설정을 실행·테스트 결과로 확인 |
-| Testcontainers | 처음 | `@ServiceConnection`, `CountDownLatch` 동시성 테스트 | 따로 공부하지 않음 — 에이전트가 작성한 설정을 실행·테스트 결과로 확인 |
-| Next.js (App Router) | 처음 | 서버/클라이언트 컴포넌트, Server Action, `revalidatePath`, `searchParams`, `server-only` | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
-| Railway / Vercel | 처음 | Dockerfile 멀티 스테이지·빌드 컨텍스트, `railway.toml`, 참조 변수(`${{서비스.변수}}`), Deploy Logs 로 원인 찾기, Vercel Root Directory·환경변수 | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
+1. **공식 문서를 AI 로 읽고 정리**해 각 기술이 어떤 역할을 하는지 먼저 이해했다.
+2. 이 저장소에서 **실제로 쓴 세부 부분**(아래 표의 "이번에 익힌 것")은 **구글링과 AI 로 추가로 공부**했다.
+
+기술별 시간은 따로 재지 않았다 (전체 작업 시간은 [실제 투입 시간](#실제-투입-시간) 참고).
+
+| 기술 | 이전 경험 | 이번에 익힌 것 (이 저장소의 어디) |
+|---|---|---|
+| Spring Boot | 강의 + 간단한 라이브 코딩 | Boot 4.1 의 모듈 분리된 스타터, `@Transactional` 경계 나누기(프록시라 같은 클래스 안 호출은 적용 안 됨), `TransactionTemplate` |
+| JPA (심화) | 처음 | 비관적 잠금(`@Lock`), 영속성 컨텍스트의 낡은 상태 문제(L032), `ddl-auto: validate` |
+| PostgreSQL | 처음 | 행 잠금과 READ COMMITTED 재평가, CHECK, 부분 UNIQUE, `ON CONFLICT`, `FOR UPDATE SKIP LOCKED`, 오류 난 트랜잭션은 더 쿼리할 수 없음(25P02) |
+| Flyway | 처음 | 버전·repeatable 마이그레이션, 저장소 루트 `db/` 를 jar 에 포함 |
+| Docker / docker compose | 처음 | 로컬 DB, Windows 에서 WSL2 필요(L023) |
+| Testcontainers | 처음 | `@ServiceConnection`, `CountDownLatch` 동시성 테스트 |
+| Next.js (App Router) | 처음 | 서버/클라이언트 컴포넌트, Server Action, `revalidatePath`, `searchParams`, `server-only` |
+| Railway / Vercel | 처음 | Dockerfile 멀티 스테이지·빌드 컨텍스트, `railway.toml`, 참조 변수(`${{서비스.변수}}`), Deploy Logs 로 원인 찾기, Vercel Root Directory·환경변수 |
 
 ### Q8. 시간이 더 있었다면
 
