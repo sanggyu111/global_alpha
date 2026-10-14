@@ -15,13 +15,13 @@
 <script>
 const PROGRESS = {
   updatedAt: "2026-10-14",
-  currentTask: "T16",
+  currentTask: "T30",
 
   phases: [
     { id: "plan",   name: "기획",        status: "done" },
     { id: "design", name: "설계",        status: "done" },
-    { id: "dev",    name: "개발 ⇄ 리뷰", status: "in-progress" },
-    { id: "submit", name: "제출 준비",   status: "todo" },
+    { id: "dev",    name: "개발 ⇄ 리뷰", status: "done" },
+    { id: "submit", name: "제출 준비",   status: "done" },
   ],
 
   tasks: [
@@ -124,9 +124,9 @@ const PROGRESS = {
     },
     {
       id: "T16", phase: "submit", title: "README · 제출 점검",
-      status: "review", branch: "docs/T16-readme",
-      checks: { error: true, spec: null }, commits: ["34e2716", "849cdff"],
-      note: "README 작성: 실행 방법·아키텍처·데이터 모델·8개 질문·정책·타협. 깨끗한 clone 에서 README 순서대로 실행 → S1 브라우저 확인, 백엔드 테스트 159건·프론트 lint·build 통과. 시크릿 이력 점검 이상 없음. 남은 것: Q7·투입 시간(지원자 직접 작성), 배포 섹션(T15 후). README 초안 사용자 승인, main 병합. 2026-10-13: 가산점 행에 자동 배포(CD) 반영·CI 없음 명시 (da66859, docs/T16-readme-cd, main 병합).",
+      status: "done", branch: "docs/T16-readme",
+      checks: { error: true, spec: true }, commits: ["34e2716", "849cdff"],
+      note: "README 작성: 실행 방법·아키텍처·데이터 모델·8개 질문·정책·타협. 깨끗한 clone 에서 README 순서대로 실행 → S1 브라우저 확인, 백엔드 테스트 159건·프론트 lint·build 통과. 시크릿 이력 점검 이상 없음. 남은 것: Q7·투입 시간(지원자 직접 작성), 배포 섹션(T15 후). README 초안 사용자 승인, main 병합. 2026-10-13: 가산점 행에 자동 배포(CD) 반영·CI 없음 명시 (da66859, docs/T16-readme-cd, main 병합). 2026-10-14: 남아 있던 Q7·투입 시간은 T30 에서 작성 완료(README TODO 0) → 완료 처리.",
     },
     {
       id: "T17", phase: "dev", title: "숙소 목록 날짜 검색 — /api/properties/search · 객실 요약 · 매진 숙소 숨김",
@@ -226,22 +226,22 @@ const PROGRESS = {
     { id: "Q4", name: "트랜잭션 경계와 멱등성", status: "done" },
     { id: "Q5", name: "프론트 서버/클라이언트 경계 · 캐싱", status: "done" },
     { id: "Q6", name: "재고 불일치 감지와 복구", status: "done" },
-    { id: "Q7", name: "처음 써본 것과 익힌 방법 (필수)", status: "in-progress" },
+    { id: "Q7", name: "처음 써본 것과 익힌 방법 (필수)", status: "done" },
     { id: "Q8", name: "시간이 더 있었다면", status: "done" },
   ],
 
   // 제출 직전 체크리스트 (PDF 부록 B)
   submission: [
-    { name: "README 에 8개 질문 답 전부", done: false },
-    { name: "배포 URL 접속 확인 (시크릿 창)", done: false },
-    { name: "README 커맨드만으로 clean clone 실행", done: false },
-    { name: ".env / 비밀번호 / 키가 이력에 없음", done: false },
-    { name: "DDL / 마이그레이션 포함", done: false },
-    { name: "동시성 테스트 통과", done: false },
-    { name: "환불 금액 계산 테스트", done: false },
-    { name: "배포처 · 이유 · 막힌 지점 기록", done: false },
-    { name: "미구현 항목 기록", done: false },
-    { name: "실제 투입 시간 기록", done: false },
+    { name: "README 에 8개 질문 답 전부", done: true },
+    { name: "배포 URL 접속 확인 (시크릿 창)", done: true },
+    { name: "README 커맨드만으로 clean clone 실행", done: true },
+    { name: ".env / 비밀번호 / 키가 이력에 없음", done: true },
+    { name: "DDL / 마이그레이션 포함", done: true },
+    { name: "동시성 테스트 통과", done: true },
+    { name: "환불 금액 계산 테스트", done: true },
+    { name: "배포처 · 이유 · 막힌 지점 기록", done: true },
+    { name: "미구현 항목 기록", done: true },
+    { name: "실제 투입 시간 기록", done: true },
   ],
 };
 </script>
