@@ -729,6 +729,17 @@ const LOG = [
     cause: "159 는 2026-10-09(T15) 시점 값이 갱신되지 않고 남음. 이후 T17~T27 에서 테스트가 190건으로 늘었다.",
     resolution: "전체 테스트 190건 통과로 README 숫자 통일(배포 섹션의 PG18 확인은 '당시 159건' 으로 명시), Q3 출력·날짜 교체. 재계산 FOR UPDATE 제거 재현은 이번엔 5회 중 1회씩 실패 → README '1~2회' 로 정정. 데모 시나리오 자동 재연 중 S2 에서 거절 직후 재결제 클릭이 무시됨 → 결제 버튼이 새로고침 동안 비활성(연타 방지 의도대로)이라 스크립트가 활성화를 기다리게 고침, 앱 문제 아님. 덤 발견: 관리자 예약 목록에 범위 밖 page 로 들어가면 '2 / 1 페이지' 와 빈 표 — 표시만 어색, 미수정. 점검 중 Docker Desktop 이 'unable to start' 로 멈춰 재시작. Q7·투입 시간은 지원자 입력 대기.",
     refs: ["README.md 실행 방법·Q3", "docs/02-design.md §12 T29"],
+  },  {
+    id: "L067",
+    at: "2026-10-14",
+    task: "T30",
+    type: "change",
+    status: "resolved",
+    title: "README 최종 정리 — 공식 문서와 다른 주장 정정, Q7·투입 시간 작성, 배포 DB 정리 생략",
+    detail: "인터뷰 준비 중 README 의 기술 주장을 공식 문서로 확인. 틀리거나 약한 것: Next 16 을 버린 이유(새 캐시 모델은 opt-in), DB 선택 근거에 MySQL 8 에도 있는 기능(SKIP LOCKED·upsert·CHECK) 포함, 과제가 \"관계형 DB\" 만 고정했다는 맥락 누락, H2 를 버린 이유, Render 무료 플랜 설명, Railway \"무료 크레딧\" 표현, Q2 잠금 순서에 payment_cancel 누락. Q7·투입 시간 TODO.",
+    cause: "초기 작성 시 일반 지식으로 적고 공식 문서와 대조하지 않음. AGENT.md 기술 스택 표에서 PostgreSQL 을 \"고정\" 으로 잘못 적은 것이 Q1 에도 이어짐.",
+    resolution: "결정: Q1 근거를 부분 인덱스·READ COMMITTED 재평가·트랜잭션 DDL·운영 버전 일치로 좁히고, Next 15 는 \"익숙함 + 16 업그레이드 비용 확인\" 으로. Q7 은 사용자 답변대로(공식 문서·구글링·AI 에이전트, 합계 약 2시간, Flyway·Docker Compose·Testcontainers 는 따로 공부 안 함). 투입 시간은 커밋 시간 기준(직전 병합~병합, 날짜 사이 공백 제외)으로 계산해 기준을 README 에 명시. 배포 DB 정리(A안)는 사용자 결정으로 생략 — 남은 데이터 상태를 README 에 사실대로 기록.",
+    refs: ["README.md Q1·Q2·Q3·Q5·Q7·실제 투입 시간·배포", "AGENT.md 2장", "docs/02-design.md §12 T30"],
   },
 ];
 </script>

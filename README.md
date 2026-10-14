@@ -120,7 +120,9 @@ npm run lint && npm run build # 타입 체크 포함
 | **서비스 (프론트)** | https://global-alpha-phi.vercel.app |
 | 백엔드 API | https://globalalpha-production.up.railway.app — [헬스 체크](https://globalalpha-production.up.railway.app/actuator/health) · [Swagger](https://globalalpha-production.up.railway.app/swagger-ui.html) |
 
-배포 후 확인 (2026-10-09): 배포 주소에서 실제 브라우저로 검색 → 예약(폼 이중 제출 → 1건) → 결제 확정, 거절 후 새 키로 재결제, PG 지연 5초 → 확정, 내 예약 → 취소 → 100% 환불 완료·잔여 재고 복원. 재고 불일치·운영자 확인 대상 0건. 확인용 예약은 모두 취소해 두었다.
+배포 후 확인 (2026-10-09): 배포 주소에서 실제 브라우저로 검색 → 예약(폼 이중 제출 → 1건) → 결제 확정, 거절 후 새 키로 재결제, PG 지연 5초 → 확정, 내 예약 → 취소 → 100% 환불 완료·잔여 재고 복원. 재고 불일치·운영자 확인 대상 0건.
+
+**배포 데이터 상태 (2026-10-14 확인)**: 개발·점검 중 만든 예약이 남아 있다 — 48건(취소 44, 확정 4). 확정 4건은 `demo-user`(상단 기본 사용자)의 예약이라 "내 예약" 에서 바로 상세·환불 예정액·취소를 볼 수 있다. 재고 불일치 0건, 자동 환불 재시도 중·운영자 확인 대상 0건. 관리자 "PG 오류" 에는 데모 시나리오 점검 때의 실패 기록(모두 해결됨)이 남아 있다.
 
 ### 배포하며 막혔던 지점과 해결
 
@@ -162,10 +164,10 @@ Vercel (frontend/) ──BACKEND_URL──▶ Railway 백엔드 서비스 (backe
 
 | 대상 | 배포처 | 고른 이유 | 버린 대안 |
 |---|---|---|---|
-| 백엔드 + PostgreSQL | Railway | 같은 프로젝트 안에서 DB 연결 변수를 백엔드 환경변수로 바로 참조 → 설정이 가장 단순. Dockerfile 로 배포 | Render + Neon — 무료 유지에는 더 안정적이지만 서비스 두 곳을 연결하는 설정이 늘어남 |
-| 프론트 | Vercel | Next.js 제작사, 설정 없이 App Router·Server Action 동작 | Railway 에 함께 — 가능하지만 Next 빌드·캐시 설정을 직접 해야 함 |
+| 백엔드 + PostgreSQL | Railway | 같은 프로젝트 안에서 DB 접속 정보를 참조 변수(`${{Postgres.PGHOST}}`)로 백엔드에 바로 넘겨 설정이 가장 단순. Dockerfile 배포라 로컬에서 같은 이미지로 재현할 수 있다(실제로 메모리 의심을 로컬 재현으로 배제). `main` push 로 자동 배포, 배포할 때 헬스 체크가 UP 이어야 새 버전으로 전환 | Render + Neon — Render 무료 웹 서비스는 15분간 요청이 없으면 잠들어 다음 요청이 약 1분 느리고(무료 Postgres 는 생성 30일 뒤 만료), DB 를 다른 서비스(Neon)와 따로 이어 붙여야 한다 |
+| 프론트 | Vercel | Next.js 제작사의 플랫폼으로 설정 없이(zero-config) 빌드된다. Root Directory(`frontend`)와 `BACKEND_URL` 만 지정. `main` push 로 자동 배포 | Railway 에 함께 — 가능하지만 Next 빌드·캐시 설정을 직접 해야 하고 크레딧을 나눠 쓴다 |
 
-- 리스크: Railway 무료 크레딧이 평가 기간 중 소진될 수 있음 → 인터뷰 전 확인, 필요하면 같은 Dockerfile 로 Render 이전.
+- 리스크: Railway 는 영구 무료가 아니다 — 최초 $5 체험 크레딧(최대 30일) 뒤에는 Free 플랜(월 $1 크레딧)으로 바뀐다. 이 프로젝트의 체험 기간은 2026-11 중 끝나고 남은 크레딧은 충분하다(2026-10-14 확인). 체험 종료 뒤 서비스가 멈추면 같은 Dockerfile 로 Render 로 옮기거나, 아래 [실행 방법](#실행-방법)대로 로컬에서 바로 재현할 수 있다.
 
 ---
 
@@ -246,16 +248,16 @@ backend/src/main/java/com/staypoint/
 
 | 영역 | 선택 | 이유 | 버린 대안 |
 |---|---|---|---|
-| 프론트 | **Next.js 15.5 (App Router) + TypeScript** | 과제 고정. App Router 는 서버/클라이언트 경계를 컴포넌트 단위로 정할 수 있어 "무엇을 어디서 실행하고 무엇을 캐시하는가" 를 코드로 보여주기 좋다. 15 는 `fetch` 기본값이 "캐시 안 함" 이라 실시간 재고에 안전하고 자료가 가장 많다 | Pages Router — 구버전 방식 / Next 16 — 캐싱 모델이 새로 바뀌어 자료가 적음 |
+| 프론트 | **Next.js 15.5 (App Router) + TypeScript** | 과제 고정(Next.js). **App Router**: `fetch` 마다 캐시 정책을 따로 줄 수 있어 같은 숙소 상세 화면에서 숙소 정보는 60초 캐시, 잔여 객실은 캐시 안 함으로 나눴다. 서버/클라이언트 경계도 컴포넌트 단위라 브라우저 기능이 필요한 5곳만 클라이언트 컴포넌트로 둔다. **15 를 쓴 이유는 익숙함** — 15 기준으로 익혔다. 15 는 `fetch` 를 기본으로 캐시하지 않는다(동적 API 가 없는 화면은 빌드 때 정적으로 굳을 수 있지만, 이 앱은 루트 레이아웃이 사용자 쿠키를 읽어 모든 화면이 동적 렌더링) | Pages Router — `getServerSideProps`/`getStaticProps` 가 페이지 단위라 실시간 재고와 정적 숙소 정보를 한 화면에서 나누기 어렵다 / Next 16 — 업그레이드 가이드를 확인해 보니 이 앱은 이미 비동기 Request API·ESLint CLI 를 써서 바꿀 것이 적다. 새 캐시 모델(Cache Components)은 opt-in 이라 올려도 지금 캐시 설계를 유지할 수 있어, 제출 전에 올리지 않았다 |
 | 데이터 패칭 | **서버 컴포넌트 `fetch` + Server Action**, 라이브러리 없음 | 조회·변경이 모두 서버에서 일어나 CORS 가 필요 없고 백엔드 주소·사용자 헤더가 브라우저에 노출되지 않는다 | TanStack Query / SWR — 클라이언트 캐시가 하나 더 생겨 무효화를 설명할 대상이 늘어남. 상태관리 라이브러리도 넣지 않음 |
 | 백엔드 | **Java 17 + Spring Boot 4.1.1 + Gradle** | 과제 고정이자 유일하게 써본 기술. 처음엔 3.5 로 설계했으나 오픈소스 지원 종료로 Initializr 가 제공하지 않아 4.1.1 로 변경 (L020·L021) | Java 21 — 가상 스레드 등 이점을 이 과제에서 쓰지 않음 / Kotlin — 학습 부담 |
 | DB 접근 | **Spring Data JPA** (엔티티·상태 전이) + **네이티브 SQL** (재고 차감·잠금) + **JdbcTemplate** (집계·동적 조회) | 상태 전이는 엔티티 메서드로 규칙을 강제하기 좋다. 반면 동시성 핵심인 재고 차감은 **SQL 한 줄이 눈에 보이게** 직접 작성. 가용 검색(재고·요금 JOIN + HAVING), 관리자 동적 필터, 모의 PG(`ON CONFLICT`) 는 엔티티로 표현하기 어려운 집계·조건이라 SQL 로 | MyBatis — 모든 SQL 을 직접 작성해 코드량 증가 / JPA 만 — 재고 차감이 엔티티 수정 뒤에 숨어 경합 동작을 설명하기 어려움 |
-| DB | **PostgreSQL 15** (운영 버전과 동일) | 행 잠금, CHECK, **부분 UNIQUE 인덱스**, `ON CONFLICT`, `FOR UPDATE SKIP LOCKED` — 이 설계가 쓰는 기능이 모두 있다 | MySQL — 부분 인덱스 미지원 |
-| 마이그레이션 | **Flyway** (`db/migration/V1__…sql`) | 순수 SQL 이라 DDL 이 그대로 보이고, 빈 DB 에서 스키마가 재현된다. 데모 데이터는 repeatable(`R__`) + `seed` 프로파일 | Liquibase — XML/YAML 문법 학습 |
-| 테스트 | **JUnit 5 + Testcontainers(PostgreSQL 15)** | 동시성 테스트는 운영과 같은 DB 엔진에서 돌려야 의미가 있다 | H2 — 락·제약 동작이 PostgreSQL 과 다름 |
+| DB | **PostgreSQL 15** (ZIVO 운영 버전과 동일) | 과제는 관계형 DB 만 지정 → 그중 PostgreSQL. ① **부분 UNIQUE 인덱스** — "예약당 진행 중 결제 1건" 을 DB 제약으로 ② 기본 격리 수준 **READ COMMITTED 에서 UPDATE 가 잠금을 기다린 뒤 WHERE 를 최신 행으로 다시 평가** — 조건부 UPDATE 재고 차감의 동작 근거 (Q2) ③ **트랜잭션 DDL** — Flyway 가 마이그레이션 파일 하나를 트랜잭션 하나로 감싸 중간에 실패하면 통째로 롤백 ④ 운영과 같은 엔진·버전에서 검증 | MySQL 8 — `CREATE INDEX` 에 WHERE 절이 없어 부분 인덱스를 생성 컬럼으로 우회해야 하고, DDL 은 문장마다 암묵적 커밋(문장 단위 원자적이지만 트랜잭션은 아님). 기본 REPEATABLE READ 는 범위 UPDATE 에 갭 락을 걸어 잠금 범위가 넓다. `SKIP LOCKED`·upsert·CHECK 는 MySQL 8 에도 있어 선택 이유로 보지 않았다 |
+| 마이그레이션 | **Flyway** (`db/migration/V1__…sql`) | 순수 SQL 이라 제약(CHECK·부분 UNIQUE)이 그대로 보이고, 빈 DB 에서 스키마가 재현된다. 스키마는 Flyway 가 만들고 Hibernate 는 `ddl-auto: validate` 로 시작 시 엔티티와 대조만 한다. 데모 데이터는 repeatable(`R__`) + `seed` 프로파일 | Liquibase — XML/YAML 문법 학습 / JPA 자동 생성 — 제약이 코드에 숨고 운영 스키마 변경 이력이 남지 않음 |
+| 테스트 | **JUnit 5 + Testcontainers(PostgreSQL 15)** | 동시성 테스트는 운영과 같은 DB 엔진에서 돌려야 의미가 있다. Spring Boot `@ServiceConnection` 이 컨테이너 접속 정보를 자동 연결 | H2 — 부분 인덱스 문법이 없고, H2 문서 스스로 다른 DB 와 "어느 정도까지만" 호환된다고 한다. 잠금·MVCC 구현이 달라 H2 에서 통과해도 PostgreSQL 에서의 증명이 되지 않는다 |
 | 로컬 DB | **Docker Desktop + docker compose** | 명령 한 줄로 같은 DB, 평가자 재현이 쉬움 | PostgreSQL 직접 설치 — 환경마다 다름 |
 | 화면 스타일 | **전역 CSS 한 파일**(`globals.css`, 색·간격 변수), 라이브러리 없음. 모바일 우선 — 좁은 화면 기준으로 쓰고 640px 이상에서 여러 열로 펼침 (T28) | 화면이 12개뿐이라 CSS 한 파일로 충분하고, 설명할 설정이 없다. 사용자 화면은 카드 목록, 관리자 표는 좁은 화면에서 행마다 세로로 쌓음(`td` 의 `data-label`) | Tailwind — 설정·클래스 규칙이 늘어남. UI 컴포넌트 킷 — 의존성 대비 얻는 것이 적음 (UI 완성도는 평가 항목이 아님) |
-| 배포 | Railway + Vercel | [배포](#배포) 참고 | Render + Neon |
+| 배포 | **Railway**(백엔드 + PostgreSQL) · **Vercel**(프론트) | Railway: 같은 프로젝트 안에서 DB 접속 정보를 참조 변수로 바로 넘겨 설정이 가장 단순, Dockerfile 이라 로컬 재현 가능. Vercel: Next.js 제작사의 플랫폼으로 설정 없이 빌드. 둘 다 `main` push 로 자동 배포 ([배포](#배포)) | Render + Neon — Render 무료 웹 서비스는 15분 뒤 잠들어 첫 요청이 느리고, DB 를 따로 연결해야 함 |
 | 추가 의존성 | springdoc-openapi (API 문서), Actuator (헬스 체크), `server-only` (프론트) | 각각 의존성 1개로 과제 권장 사항 해결. `server-only` 는 서버 전용 코드(백엔드 주소)가 실수로 브라우저 번들에 섞이면 **빌드가 실패**하게 한다 | — |
 
 **의도적으로 넣지 않은 것**: Lombok(코드가 숨겨져 설명이 어려움 → `record` 사용), Redis·분산락·메시지 큐(DB 하나로 정합성을 지킬 수 있는데 인프라를 늘리면 DB 와 이중 관리 문제가 생김), 인증 라이브러리(과제 범위 밖), E2E 테스트 프레임워크(아래 Q8).
@@ -273,7 +275,7 @@ UPDATE room_inventory
 ```
 
 - 예약 생성 트랜잭션: `reservation INSERT` → 위 UPDATE → `reservation_history INSERT`. **영향받은 행 수 ≠ 숙박일 수** 면(하루라도 매진이거나 재고 행 없음) 예외 → 트랜잭션 전체 롤백 → 일부 날짜만 차감되는 일 없음.
-- 동작 원리: PostgreSQL 은 UPDATE 대상 행에 행 잠금을 건다. 같은 날짜를 노리는 두 트랜잭션 중 하나는 기다리고, 앞 트랜잭션이 커밋되면 **WHERE 조건을 최신 값으로 다시 평가**한다(READ COMMITTED). 마지막 1실이면 두 번째는 `booked_count < total_count` 가 거짓 → 0행 → `SOLD_OUT`.
+- 동작 원리: PostgreSQL 은 UPDATE 대상 행에 행 잠금을 건다. 같은 날짜를 노리는 두 트랜잭션 중 하나는 기다리고, 앞 트랜잭션이 커밋되면 **WHERE 조건을 최신 값으로 다시 평가**한다(READ COMMITTED). 마지막 1실이면 두 번째는 `booked_count < total_count` 가 거짓 → 0행 → `SOLD_OUT`. 격리 수준을 REPEATABLE READ 로 올리면 PostgreSQL 은 두 번째 트랜잭션을 재평가 대신 직렬화 오류(`could not serialize access due to concurrent update`)로 롤백해 재시도 로직이 필요해진다 — READ COMMITTED 의 재평가 덕분에 재시도 없이 `SOLD_OUT` 으로 정확히 끝난다.
 - 최종 방어선: `CHECK (booked_count <= total_count)`. 코드에 버그가 있어 조건 없이 +1 해도 DB 가 거부한다 (테스트로 확인).
 - 예약 INSERT 를 재고 UPDATE 보다 **먼저** 하는 이유: 같은 멱등 키의 중복 요청은 UNIQUE 인덱스에서 먼저 막혀 재고 행 잠금까지 가지 않는다.
 
@@ -293,7 +295,7 @@ UPDATE room_inventory
 - 선점 만료·취소: 예약 행을 잠그고(`FOR UPDATE`) 상태를 바꾼 **같은 트랜잭션에서** `booked_count - 1` (조건 `booked_count > 0`).
 - 만료와 결제 확정이 동시에 오면: 둘 다 예약 행을 먼저 잠그므로 순서가 강제된다. 만료가 먼저면 결제 반영 시 예약이 PENDING 이 아니라 확정하지 않고 **보상 취소**, 결제가 먼저면 CONFIRMED 라 만료 대상이 아니다 (테스트 S7).
 - 관리자 재고 축소: 기간 재고 행을 날짜 순으로 `FOR UPDATE` → 예약 수보다 줄이는 날짜가 있으면 전체 거부. 그 사이 예약 요청은 잠금을 기다렸다가 새 `total_count` 로 다시 평가된다 (테스트: 재고 축소와 10명 동시 예약 3회 반복, 항상 booked ≤ total).
-- 잠금 순서는 모든 흐름에서 `reservation → payment → room_inventory` (교착 방지).
+- 잠금 순서는 모든 흐름에서 `reservation → payment → payment_cancel → room_inventory` 의 부분열 (교착 방지). 예: 결제 반영 `reservation → payment`, 취소 `reservation → payment → room_inventory`, 환불 결과 반영 `payment → payment_cancel`, 관리자 재고 수정 `room_inventory` 단독.
 
 **이 방식이 깨지는 조건**
 
@@ -355,7 +357,7 @@ UPDATE room_inventory
 | mypage.MyReservationApiTest | 5 | | schema.SchemaConstraintTest / SeedDataTest | 6 / 4 |
 | common.error.GlobalExceptionHandlerTest | 7 | | HealthEndpointTest / ApplicationTests | 1 / 1 |
 
-**화면 흐름**은 자동 E2E 테스트 대신, 개발 중 실제 Chrome 을 스크립트로 구동해 확인했다 (정상 결제, 폼 이중 제출 → 예약 1건, 거절 후 새 키로 재결제, 지연 5초 → 처리 중 → 확정, 취소 후 잔여 재고 복원, 관리자 필터·재고 축소 거부·재계산·수동 재시도). 확인 스크립트는 저장소에 넣지 않았다 (Q8).
+**화면 흐름**은 자동 E2E 테스트 대신, 개발 중 실제 Chrome 을 스크립트로 구동해 확인했다 (정상 결제, 폼 이중 제출 → 예약 1건, 거절 후 새 키로 재결제, 지연 5초 → 처리 중 → 확정, 취소 후 잔여 재고 복원, 관리자 필터·재고 축소 거부·재계산·수동 재시도). 제출 전 점검(2026-10-13)에서는 GitHub 에서 새로 clone 한 환경에서 위 데모 시나리오 8개(확인 항목 13개 — 선점 만료 10분, 환불 재시도 소진 약 15분 포함)를 Chrome 자동 조작으로 재연해 모두 정상임을 확인했다. 확인 스크립트는 저장소에 넣지 않았다 (Q8).
 
 ### Q4. 트랜잭션 경계와 멱등성
 
@@ -428,6 +430,7 @@ sequenceDiagram
 | 예약·결제 상태, 내 예약, 환불 예정액 | **캐시 안 함** | 결제·만료·취소로 계속 바뀌고, 환불 예정액은 "오늘" 기준이라 날마다 달라짐 |
 | 관리자 화면 전체 | **캐시 안 함** | 운영 판단용 |
 
+- `revalidate: 60` 은 시간 기반 재검증이다 — 60초 안의 요청은 저장본을 받고, 60초가 지난 뒤 첫 요청도 일단 저장본을 받은 채 뒤에서 새로 가져와 교체한다(stale-while-revalidate). "최대 60초 지연" 이 아니라 "60초가 지나면 다음 요청 때 갱신이 시작" 이다. 숙소 이름·주소라 이 정도 지연은 정합성과 무관하다.
 - `lib/api.ts` 의 기본값을 `no-store` 로 두고, 캐시해도 되는 곳만 `revalidate` 를 명시하게 했다 → 실수로 실시간 데이터를 캐시하는 쪽으로 틀리지 않는다.
 - **화면에 보인 재고는 참고값이다.** 최종 판단은 예약 생성 시 DB 의 조건부 UPDATE 가 한다. 화면을 본 뒤 매진되면 `SOLD_OUT` 메시지를 보여준다. 가용 재고를 몇 초 캐시해도 정확성은 깨지지 않지만 매진된 객실을 보여주는 빈도만 늘어 캐시하지 않았다. 예약 입력 화면은 선택한 객실을 한 번 더 조회해 그 사이 매진됐으면 바로 안내한다.
 - 변경 후 갱신: 예약 생성·취소는 숙소 상세(잔여 재고), 결제는 결제 화면, 취소는 내 예약 목록·상세 경로를 `revalidatePath`.
@@ -466,18 +469,18 @@ HAVING i.booked_count <> COUNT(r.id);
 
 ### Q7. 처음 써본 것과 익힌 방법
 
-> **TODO(지원자)** — 아래는 작업 로그(L016)의 사실만 옮긴 뼈대다. 익힌 방법과 걸린 시간은 지원자 본인이 직접 채운다.
+공부한 기술은 모두 같은 방식 — **공식 문서 · 구글링 · AI 에이전트로 개념을 확인**했다. 기술별 시간은 따로 재지 않았고, 개념 확인에 쓴 시간은 모두 합쳐 **약 2시간**이다. Flyway · Docker Compose · Testcontainers 는 따로 공부하지 않고 사용했다 — AI 에이전트가 작성한 설정을 실행·테스트 결과로 확인했다.
 
 | 기술 | 이전 경험 | 이번에 익힌 것 (이 저장소의 어디) | 익힌 방법 · 시간 |
 |---|---|---|---|
-| Spring Boot | 강의 + 간단한 라이브 코딩 | Boot 4.1 의 모듈 분리된 스타터, `@Transactional` 경계 나누기(프록시라 같은 클래스 안 호출은 적용 안 됨), `TransactionTemplate` | TODO |
-| JPA (심화) | 처음 | 비관적 잠금(`@Lock`), 영속성 컨텍스트의 낡은 상태 문제(L032), `ddl-auto: validate` | TODO |
-| PostgreSQL | 처음 | 행 잠금과 READ COMMITTED 재평가, CHECK, 부분 UNIQUE, `ON CONFLICT`, `FOR UPDATE SKIP LOCKED`, 오류 난 트랜잭션은 더 쿼리할 수 없음(25P02) | TODO |
-| Flyway | 처음 | 버전·repeatable 마이그레이션, 저장소 루트 `db/` 를 jar 에 포함 | TODO |
-| Docker / docker compose | 처음 | 로컬 DB, Windows 에서 WSL2 필요(L023) | TODO |
-| Testcontainers | 처음 | `@ServiceConnection`, `CountDownLatch` 동시성 테스트 | TODO |
-| Next.js (App Router) | 처음 | 서버/클라이언트 컴포넌트, Server Action, `revalidatePath`, `searchParams`, `server-only` | TODO |
-| Railway / Vercel | 처음 | Dockerfile 멀티 스테이지·빌드 컨텍스트, `railway.toml`, 참조 변수(`${{서비스.변수}}`), Deploy Logs 로 원인 찾기, Vercel Root Directory·환경변수 | TODO |
+| Spring Boot | 강의 + 간단한 라이브 코딩 | Boot 4.1 의 모듈 분리된 스타터, `@Transactional` 경계 나누기(프록시라 같은 클래스 안 호출은 적용 안 됨), `TransactionTemplate` | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
+| JPA (심화) | 처음 | 비관적 잠금(`@Lock`), 영속성 컨텍스트의 낡은 상태 문제(L032), `ddl-auto: validate` | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
+| PostgreSQL | 처음 | 행 잠금과 READ COMMITTED 재평가, CHECK, 부분 UNIQUE, `ON CONFLICT`, `FOR UPDATE SKIP LOCKED`, 오류 난 트랜잭션은 더 쿼리할 수 없음(25P02) | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
+| Flyway | 처음 | 버전·repeatable 마이그레이션, 저장소 루트 `db/` 를 jar 에 포함 | 따로 공부하지 않음 — 에이전트가 작성한 설정을 실행·테스트 결과로 확인 |
+| Docker / docker compose | 처음 | 로컬 DB, Windows 에서 WSL2 필요(L023) | 따로 공부하지 않음 — 에이전트가 작성한 설정을 실행·테스트 결과로 확인 |
+| Testcontainers | 처음 | `@ServiceConnection`, `CountDownLatch` 동시성 테스트 | 따로 공부하지 않음 — 에이전트가 작성한 설정을 실행·테스트 결과로 확인 |
+| Next.js (App Router) | 처음 | 서버/클라이언트 컴포넌트, Server Action, `revalidatePath`, `searchParams`, `server-only` | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
+| Railway / Vercel | 처음 | Dockerfile 멀티 스테이지·빌드 컨텍스트, `railway.toml`, 참조 변수(`${{서비스.변수}}`), Deploy Logs 로 원인 찾기, Vercel Root Directory·환경변수 | 공식 문서 · 구글링 · AI 에이전트로 개념 확인 |
 
 ### Q8. 시간이 더 있었다면
 
@@ -530,13 +533,22 @@ HAVING i.booked_count <> COUNT(r.id);
 
 ## 실제 투입 시간
 
-> **TODO(지원자)** — 실제 투입 시간을 직접 적는다. 참고: Git 기록상 첫 커밋 2026-10-09 12:32, T14 병합 19:22. Task 별 기록은 [docs/progress.html](docs/progress.html), 오류·결정 기록은 [docs/worklog.html](docs/worklog.html).
+**커밋 시간 기준으로 계산했다.** 각 Task 의 시간 = 직전 Task 병합(또는 그날 첫 커밋)부터 그 Task 병합까지. 날짜 사이 공백은 빼고, 하루 안의 휴식은 포함될 수 있으며, 그날 첫 커밋 전의 작업 시간은 빠진다. Task 별 기록은 [docs/progress.html](docs/progress.html), 오류·결정 기록은 [docs/worklog.html](docs/worklog.html).
 
-| 단계 | 시간 |
-|---|---|
-| 기획 · 설계 | TODO |
-| 백엔드 (T03~T10, T14) | TODO |
-| 프론트 (T11~T13) | TODO |
-| 배포 (T15) | TODO |
-| README · 점검 (T16) | TODO |
-| **합계** | TODO |
+| 날짜 | 단계 | Task | 시간 |
+|---|---|---|---|
+| 10-09 | 기획 · 설계 | T00~T02 | 2시간 3분 |
+| 10-09 | 백엔드 | T03~T10, T14 | 4시간 18분 |
+| 10-09 | 프론트 | T11~T13 | 29분 |
+| 10-09 | README | T16 | 22분 |
+| 10-09 | 배포 | T15 | 1시간 42분 |
+| 10-10 | 숙소 날짜 검색 · 날짜 입력 제한 | T17~T19 | 1시간 11분 |
+| 10-10 | 환불 실패 데모 | T20 | 2시간 5분 |
+| 10-11 | 운영 화면 · PG 오류 화면 | T21~T23 | 46분 |
+| 10-11 | 결제 화면 환불 규정 · 점검 피드백 반영 | T24 · T25 | 28분 |
+| 10-11 | 재계산 동시성 테스트 | T26 | 3시간 5분 |
+| 10-11 | 배포 점검 반영 (타임아웃 데모) | T27 | 1시간 6분 |
+| 10-13 | 화면 정리 · 모바일 대응 | T28 | 26분 |
+| 10-13 | 제출 전 점검 (테스트 재실행 · clone 재현 · 데모 재연) | T29 | 4시간 42분 |
+| 10-14 | README 최종 정리 | T30 | 11분 |
+| | **합계** | | **22시간 54분** |
